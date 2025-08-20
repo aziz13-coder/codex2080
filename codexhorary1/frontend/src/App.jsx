@@ -193,35 +193,11 @@ class StorageService {
       id: Date.now(),
       timestamp: new Date(),
       date: new Date().toISOString().split('T')[0],
-      tags: this.extractTags(chart.question)
+      tags: chart.tags && chart.tags.length ? chart.tags : ['general']
     };
     charts.unshift(newChart);
     localStorage.setItem('voxstella_charts', JSON.stringify(charts.slice(0, 100))); // Keep last 100
     return newChart;
-  }
-
-  static extractTags(question) {
-    const tagMap = {
-      'job|work|career|promotion|employment|business': 'career',
-      'love|relationship|marriage|partner|boyfriend|girlfriend|spouse': 'relationship',
-      'money|wealth|financial|income|salary|profit|investment|debt': 'finance',
-      'health|illness|sick|disease|doctor|medical|hospital': 'health',
-      'travel|journey|trip|move|relocation|abroad': 'travel',
-      'family|parent|child|mother|father|sibling': 'family',
-      'home|house|property|real estate|apartment': 'property',
-      'education|school|university|study|exam|degree': 'education'
-    };
-
-    const tags = [];
-    const lowerQuestion = question.toLowerCase();
-
-    for (const [pattern, tag] of Object.entries(tagMap)) {
-      if (new RegExp(pattern).test(lowerQuestion)) {
-        tags.push(tag);
-      }
-    }
-
-    return tags.length > 0 ? tags : ['general'];
   }
 
   static getNotes() {
@@ -1119,6 +1095,7 @@ const ChartCard = ({ chart, onClick, darkMode }) => {
       'family': 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
       'property': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
       'education': 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+      'gambling': 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
       'default': 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
     };
     return colors[tag] || colors.default;
@@ -1383,13 +1360,18 @@ const EnhancedChartCasting = ({ setCurrentChart, setCurrentView, darkMode, apiSt
       } else {
         throw new Error('API offline');
       }
-
+      
       // Process successful API response
+      const category = result?.question_analysis?.question_type
+        ? result.question_analysis.question_type.toLowerCase().replace(/_/g, ' ')
+        : 'general';
+
       const processedChart = {
         ...result,
         id: Date.now(),
         timestamp: new Date(),
-        outcome: result.judgment === 'YES' ? 'positive' : 
+        tags: [category],
+        outcome: result.judgment === 'YES' ? 'positive' :
                 result.judgment === 'NO' ? 'negative' : 'uncertain'
       };
 
@@ -1418,6 +1400,7 @@ const EnhancedChartCasting = ({ setCurrentChart, setCurrentView, darkMode, apiSt
       question: requestData.question,
       judgment: randomJudgment,
       confidence: Math.floor(Math.random() * 40) + 60,
+      tags: ['general'],
       reasoning: [
         "Chart is radical - Ascendant at 15.3°",
         `Significators identified: ${requestData.manualHouses ? `Manual houses ${requestData.manualHouses}` : 'Traditional house rulers'}`,
@@ -4038,6 +4021,7 @@ const Timeline = ({ charts, setCurrentChart, setCurrentView, darkMode }) => {
       'family': 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
       'property': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
       'education': 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+      'gambling': 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
       'default': 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
     };
     return colors[tag] || colors.default;
