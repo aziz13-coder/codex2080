@@ -2835,12 +2835,17 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                     # Check if within traditional orb
                     traditional_orb = aspect_type.orb
                     if orb_from_exact <= traditional_orb:
-                        # Calculate when perfection occurs
-                        relative_speed = abs(moon_pos.speed - planet_pos.speed)
-                        if relative_speed > 0:
-                            days_to_perfection = orb_from_exact / relative_speed
-                            degrees_moon_will_travel = moon_pos.speed * days_to_perfection
-                            
+                        # Calculate when perfection occurs using analytic solver
+                        days_to_perfection = self._calculate_future_aspect_time(
+                            moon_pos,
+                            planet_pos,
+                            aspect_type,
+                            chart.julian_day,
+                            cfg().timing.max_future_days,
+                        )
+                        if days_to_perfection is not None:
+                            degrees_moon_will_travel = abs(moon_pos.speed) * days_to_perfection
+
                             # Check if perfection occurs before Moon leaves sign
                             if degrees_moon_will_travel <= degrees_left_in_sign:
                                 future_applications.append({
@@ -2848,7 +2853,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                                     "aspect": aspect_type,
                                     "orb": orb_from_exact,
                                     "days_to_perfection": days_to_perfection,
-                                    "perfects_in_sign": True
+                                    "perfects_in_sign": True,
                                 })
         
         # Moon is void if no future applications found
@@ -2908,9 +2913,16 @@ class EnhancedTraditionalHoraryJudgmentEngine:
             if Planet.MOON in [aspect.planet1, aspect.planet2]:
                 other_planet = aspect.planet2 if aspect.planet1 == Planet.MOON else aspect.planet1
                 
-                # Enhanced timing using real Moon speed
+                # Enhanced timing using analytic solver
                 if aspect.applying:
-                    timing_days = aspect.degrees_to_exact / moon_speed if moon_speed > 0 else 0
+                    other_pos = chart.planets[other_planet]
+                    timing_days = self._calculate_future_aspect_time(
+                        moon_pos,
+                        other_pos,
+                        aspect.aspect,
+                        chart.julian_day,
+                        cfg().timing.max_future_days,
+                    ) or 0
                     timing_estimate = self._format_timing_description_enhanced(timing_days)
                 else:
                     timing_estimate = "Past"
@@ -3255,45 +3267,52 @@ class EnhancedTraditionalHoraryJudgmentEngine:
         
         return {"perfects": False, "reason": "No future perfection within timeframe"}
     
-    def _calculate_future_aspect_time(self, pos1: PlanetPosition, pos2: PlanetPosition, 
-                                     aspect_type: Aspect, jd_start: float, max_days: int) -> float:
-        """Calculate days until future aspect perfection"""
-        
-        # Calculate target angular separation for aspect
+    def _calculate_future_aspect_time(
+        self,
+        pos1: PlanetPosition,
+        pos2: PlanetPosition,
+        aspect_type: Aspect,
+        jd_start: float,
+        max_days: int,
+    ) -> float:
+        """Analytically solve when two planets perfect a future aspect.
+
+        Solves ``A₀ + v_A·t = B₀ + v_B·t + target_angle`` for the smallest
+        positive ``t``. Speeds are signed so retrograde motion is respected.
+        ``Δλ`` is normalised to ``[0, 360)`` before solving. Returns ``None``
+        if perfection does not occur within ``max_days``.
+        """
+
         target_angles = {
             Aspect.CONJUNCTION: 0,
             Aspect.SEXTILE: 60,
             Aspect.SQUARE: 90,
             Aspect.TRINE: 120,
-            Aspect.OPPOSITION: 180
+            Aspect.OPPOSITION: 180,
         }
-        
+
         target_angle = target_angles.get(aspect_type)
         if target_angle is None:
             return None
-        
-        # Current angular separation
-        current_separation = abs(pos1.longitude - pos2.longitude)
-        if current_separation > 180:
-            current_separation = 360 - current_separation
-        
-        # Relative speed (degrees per day)
-        relative_speed = abs(pos1.speed - pos2.speed)
-        if relative_speed < 0.01:  # Essentially no relative motion
+
+        # Relative speed (signed)
+        relative_speed = pos1.speed - pos2.speed
+        if abs(relative_speed) < 1e-6:
             return None
-        
-        # Simple calculation: time to reach target angle
-        angle_diff = abs(current_separation - target_angle)
-        
-        # Handle wrap-around cases
-        if angle_diff > 180:
-            angle_diff = 360 - angle_diff
-        
-        days_to_perfection = angle_diff / relative_speed
-        
-        if 0 < days_to_perfection <= max_days:
-            return days_to_perfection
-        
+
+        # Normalised longitudinal difference
+        delta = (pos2.longitude + target_angle - pos1.longitude) % 360.0
+
+        # Solve for time
+        t = delta / relative_speed
+        if t <= 0:
+            # Advance by full cycle until positive
+            cycle = 360.0 / abs(relative_speed)
+            t += cycle
+
+        if t > 0 and t <= max_days:
+            return t
+
         return None
     
     def _check_house_placement_perfection(self, chart: HoraryChart, querent: Planet, quesited: Planet, window_days: int = None) -> Dict[str, Any]:
@@ -3698,10 +3717,22 @@ class EnhancedTraditionalHoraryJudgmentEngine:
             return degrees_remaining / abs(pos.speed) if pos.speed != 0 else None
     
     def _days_to_aspect_perfection(self, pos1: PlanetPosition, pos2: PlanetPosition, aspect_info: Dict) -> float:
-        """Calculate days until aspect perfects"""
+        """Calculate days until aspect perfects using analytic solver."""
+        aspect = aspect_info.get("aspect")
+        if aspect:
+            t = self._calculate_future_aspect_time(
+                pos1, pos2, aspect, jd_start=0.0, max_days=cfg().timing.max_future_days
+            )
+            return t if t is not None else float("inf")
+
         degrees_to_exact = aspect_info.get("degrees_to_exact", 0)
-        relative_speed = abs(pos1.speed - pos2.speed)
-        return degrees_to_exact / relative_speed if relative_speed > 0 else float('inf')
+        relative_speed = pos1.speed - pos2.speed
+        if relative_speed == 0:
+            return float("inf")
+        t = degrees_to_exact / relative_speed
+        if t <= 0:
+            t += 360.0 / abs(relative_speed)
+        return t
     
     def _enhanced_perfects_in_sign(self, pos1: PlanetPosition, pos2: PlanetPosition,
                                   aspect_info: Dict, chart: HoraryChart) -> Tuple[bool, Optional[Dict[str, Any]]]:
@@ -3713,12 +3744,16 @@ class EnhancedTraditionalHoraryJudgmentEngine:
         days_to_exit_1 = days_to_sign_exit(pos1.longitude, pos1.speed)
         days_to_exit_2 = days_to_sign_exit(pos2.longitude, pos2.speed)
 
-        # Estimate days until aspect perfects
-        relative_speed = abs(pos1.speed - pos2.speed)
-        if relative_speed == 0:
+        # Estimate days until aspect perfects using analytic solver
+        days_to_perfect = self._calculate_future_aspect_time(
+            pos1,
+            pos2,
+            aspect_info["aspect"],
+            chart.julian_day,
+            cfg().timing.max_future_days,
+        )
+        if days_to_perfect is None:
             return False, {"type": "stalled"}
-
-        days_to_perfect = aspect_info["degrees_to_exact"] / relative_speed
 
         # NEW: Check for future stations before perfection
         jd_start = chart.julian_day

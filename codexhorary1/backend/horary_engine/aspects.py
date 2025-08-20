@@ -306,25 +306,18 @@ def calculate_moiety_based_orb(
 def is_applying_enhanced(
     pos1: PlanetPosition, pos2: PlanetPosition, aspect: Aspect, jd_ut: float
 ) -> bool:
-    """
-    Derivative method for applying/separating determination.
-    Applying = angular distance to exact aspect is decreasing over time.
-    This method is bulletproof and handles all edge cases correctly.
-    """
-    
-    # Get current orb to exact aspect
-    current_orb = _calculate_orb_to_aspect(pos1, pos2, aspect)
-    
-    # Calculate orb after small time increment
-    time_increment = cfg().timing.timing_precision_days  # Default 0.1 days
-    future_orb = _calculate_orb_to_aspect_at_time(pos1, pos2, aspect, time_increment)
-    
+    """Determine if planets are applying to a given aspect analytically."""
+
+    # Signed difference from exact aspect in range [-180, 180)
+    diff = (pos1.longitude - pos2.longitude - aspect.degrees + 180) % 360 - 180
+    current_orb = abs(diff)
+
     # Check sign exit conditions (preserve traditional horary rules)
     if not _will_perfect_before_sign_exit(pos1, pos2, aspect, current_orb):
         return False
-    
-    # Applying if orb to exact aspect is decreasing
-    return future_orb < current_orb
+
+    relative_speed = pos1.speed - pos2.speed
+    return diff * relative_speed < 0
 
 
 def _calculate_orb_to_aspect(pos1: PlanetPosition, pos2: PlanetPosition, aspect: Aspect) -> float:
