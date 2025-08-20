@@ -291,139 +291,21 @@ const JudgmentBreakdown = ({ reasoning, darkMode }) => {
   const structuredReasoning = useMemo(() => {
     if (!reasoning || reasoning.length === 0) return [];
     
-    // Check if already structured (has stage, rule, weight properties)
+    // Already structured: ensure numeric weights
     if (reasoning[0] && typeof reasoning[0] === 'object' && 'stage' in reasoning[0]) {
-      return reasoning;
+      return reasoning.map(item => ({
+        ...item,
+        weight: typeof item.weight === 'number' ? item.weight : Number(item.weight) || 0,
+      }));
     }
-    
-    // Transform string array into structured format
-    const stages = {};
-    reasoning.forEach((reason, index) => {
-      let stage = 'General';
-      let rule = reason;
-      let weight = 0;
-      
-      // Handle special flags first
-      if (reason === 'FLAG: MOON_NEXT_DECISIVE') {
-        stage = 'Moon Analysis';
-        rule = 'Moon\'s next aspect is decisive';
-        weight = +1; // This is a positive factor
-      } else if (reason.includes('radical') || reason.includes('Radicality') || reason.includes('Planetary hour ruler')) {
-        stage = 'Radicality';
-        if (reason.includes('Bypassed by override')) {
-          weight = 0; // Neutral for bypassed radicality
-        } else {
-          // Radicality warnings should be yellow (weight = 0), only severe issues should be red (-1)
-          const isWarning = reason.includes('Saturn in 7th house') || reason.toLowerCase().includes('early') || reason.toLowerCase().includes('late') || reason.includes('does not match');
-          const isFailure = reason.toLowerCase().includes('not radical') || reason.includes('invalid');
-          weight = isFailure ? -1 : isWarning ? 0 : +1;
-        }
-      } else if (reason.includes('Negative perfection') || reason.includes('negative perfection')) {
-        stage = 'Aspects';
-        weight = -1; // Negative perfection should be red
-      } else if (reason.includes('denial') || reason.includes('Denial') || reason.includes('denies') || reason.includes('confirms denial')) {
-        stage = 'Final Assessment';
-        weight = -1; // FIXED: Check denial FIRST before other conditions
-      } else if ((reason.includes('Significator') || reason.includes('significator')) && 
-                 !reason.includes('perfection') && !reason.includes('Perfection') && !reason.includes('Denial')) {
-        stage = 'Significators';
-        // FIXED: Significators identification is neutral, but not perfection analysis or denial
-        weight = 0; // Neutral - just identifying significators  
-      } else if (reason.includes('3rd person analysis') || reason.includes('person analysis')) {
-        stage = 'Significators';
-        weight = 0; // Neutral for 3rd person context info
-      } else if (reason.includes('Perfection found') || reason.includes('perfection found')) {
-        stage = 'Reception';
-        weight = +1; // Green for positive perfection
-      } else if (reason.includes('Void Moon') || reason.includes('void moon')) {
-        stage = 'Chart Considerations';
-        weight = -1; // Void Moon is a negative consideration
-      } else if (reason.includes('aspect') || reason.includes('Aspect') || (reason.includes('perfection') && !reason.includes('Denial')) || reason.includes('Moon-Sun')) {
-        stage = 'Aspects';
-        weight = reason.includes('applying') || (reason.includes('perfection') && !reason.includes('Denial')) || reason.includes('Moon-Sun') ? +1 : 0;
-      } else if (reason.includes('reception') || reason.includes('Reception')) {
-        stage = 'Reception';
-        weight = reason.includes('mutual') || reason.includes('positive') || 
-                reason.includes('mixed_reception') || reason.includes('Pregnancy') ? +1 : 0;
-      } else if (reason.includes('dignity') || reason.includes('Dignity')) {
-        stage = 'Dignities';
-        weight = reason.includes('strong') || reason.includes('exalted') ? +1 : reason.includes('weak') || reason.includes('detriment') ? -1 : 0;
-      } else if ((reason.includes('♀') || reason.includes('♂') || reason.includes('♃') || reason.includes('♄') || reason.includes('☽') || reason.includes('☉')) && 
-                 (reason.includes('☌') || reason.includes('☍') || reason.includes('□') || reason.includes('△') || reason.includes('⚹') || 
-                  reason.includes('applying') || reason.includes('separating'))) {
-        stage = 'Aspects';
-        // Determine weight based on aspect quality and content
-        if (reason.includes('insufficient') || reason.includes('noted but insufficient')) {
-          weight = -1;
-        } else if (reason.includes('(+') && reason.includes(')')) {
-          // Extract positive number from (+X) format
-          const match = reason.match(/\(\+(\d+)\)/);
-          weight = match ? +1 : 0;
-        } else if (reason.includes('(-') && reason.includes(')')) {
-          weight = -1;
-        } else {
-          weight = 0;
-        }
-      } else if ((reason.includes('Retrograde') || reason.includes('retrograde') || reason.includes('turning away')) && 
-                 !reason.includes('♀') && !reason.includes('♂') && !reason.includes('♃') && 
-                 !reason.includes('♄') && !reason.includes('☌') && !reason.includes('☍') && 
-                 !reason.includes('□') && !reason.includes('△') && !reason.includes('⚹') &&
-                 !reason.includes('applying') && !reason.includes('separating')) {
-        stage = 'Planetary Motion';
-        weight = -1; // Retrograde significators are generally negative (but not retrograde aspects)
-      } else if (reason.includes('Chart validity') || reason.includes('confidence capped') || (reason.includes('🟡') && (reason.includes('warning') || reason.includes('caution')))) {
-        stage = 'Chart Considerations';
-        weight = 0; // Warnings are neutral - cautionary but not denial
-      } else if (reason.includes('solar') || reason.includes('cazimi') || reason.includes('combusted') || reason.includes('Combustion') || (reason.includes('🔴') && (reason.includes('solar') || reason.includes('combust')))) {
-        stage = 'Solar Conditions';
-        weight = reason.includes('cazimi') ? +2 : (reason.includes('combusted') || reason.includes('Combustion')) ? -1 : 0;
-      } else if (reason.includes('timing') || (reason.includes('perfection') && !reason.includes('Denial'))) {
-        stage = 'Timing';
-        weight = +1;
-      } else if (reason.includes('Note:') || reason.includes('Benefic support')) {
-        stage = 'Additional Factors';
-        weight = reason.includes('insufficient') || reason.includes('weak') ? -1 : +1;
-      } else {
-        // ENHANCED: Better default logic for unmatched items
-        stage = 'General';
-        // Look for positive/negative keywords in unmatched items
-        const positiveWords = ['strong', 'favorable', 'good', 'positive', 'perfection found', 'success', 'benefic', 'translation of light', 'collection of light'];
-        const negativeWords = ['weak', 'denied', 'difficulty', 'problem', 'negative', 'failed', 'combust', 'prohibition'];
-        const warningWords = ['warning', 'caution', 'capped', 'reduced confidence', 'chart validity', 'void moon'];
-        
-        const hasPositive = positiveWords.some(word => reason.toLowerCase().includes(word));
-        const hasNegative = negativeWords.some(word => reason.toLowerCase().includes(word));
-        const hasWarning = warningWords.some(word => reason.toLowerCase().includes(word));
-        
-        if (hasWarning) {
-          weight = 0; // Grey (warnings are cautionary, neutral)
-          stage = 'Chart Considerations';
-        } else if (hasPositive && !hasNegative) {
-          weight = +1; // Green
-        } else if (hasNegative && !hasPositive) {
-          weight = -1; // Red  
-        } else {
-          weight = 0; // Grey (neutral or mixed signals)
-        }
-      }
-      
-      if (!stages[stage]) {
-        stages[stage] = [];
-      }
-      
-      // Clean the rule text by removing emoji dots
-      const cleanRule = rule.replace(/🔴|⚪|🟢|🟡/g, '').trim();
-      
-      // Add tooltip for special cases
-      const tooltip = reason === 'FLAG: MOON_NEXT_DECISIVE' 
-        ? 'The Moon\'s next applying aspect involves a significator and influences the verdict more than other minor testimonies.'
-        : null;
-      
-      stages[stage].push({ stage, rule: cleanRule, weight, tooltip });
+
+    // Parse plain text reasoning entries
+    return reasoning.map(text => {
+      const match = text.match(/\(([-+]\d+)\)/);
+      const weight = match ? parseInt(match[1], 10) : 0;
+      const rule = text.replace(/\(([-+]\d+)\)/, '').trim();
+      return { stage: 'General', rule, weight };
     });
-    
-    // Flatten into array maintaining stage grouping
-    return Object.values(stages).flat();
   }, [reasoning]);
 
   // Group by stage
@@ -438,18 +320,10 @@ const JudgmentBreakdown = ({ reasoning, darkMode }) => {
     return groups;
   }, [structuredReasoning]);
 
-  const getWeightColor = (weight, rule = '') => {
+  const getWeightColor = (weight) => {
     if (weight > 0) return 'bg-emerald-500';
     if (weight < 0) return 'bg-red-500';
-    const ruleLower = rule.toLowerCase();
-    // Check if this is a warning case that should be yellow instead of gray
-    const isWarning = ruleLower.includes('saturn in 7th house') ||
-                     ruleLower.includes('void moon') ||
-                     ruleLower.includes('early') ||
-                     ruleLower.includes('late') ||
-                     ruleLower.includes('warning') ||
-                     ruleLower.includes('noted but');
-    return isWarning ? 'bg-amber-500' : 'bg-gray-400';
+    return 'bg-amber-500';
   };
 
   const getStageWeight = (items) => {
@@ -460,19 +334,7 @@ const JudgmentBreakdown = ({ reasoning, darkMode }) => {
     const stageWeight = getStageWeight(items);
     if (stageWeight > 0) return 'bg-emerald-500';
     if (stageWeight < 0) return 'bg-red-500';
-    
-    // Check if any items in this stage are warnings (weight 0 but warning content)
-    const hasWarnings = items.some(item => 
-      item.weight === 0 && (
-        item.rule.includes('Saturn in 7th house') || 
-        item.rule.includes('Void Moon') || 
-        item.rule.includes('early') || 
-        item.rule.includes('late') || 
-        item.rule.includes('warning') ||
-        item.rule.includes('noted but')
-      )
-    );
-    return hasWarnings ? 'bg-amber-500' : 'bg-gray-400';
+    return 'bg-amber-500';
   };
 
   return (
@@ -488,44 +350,23 @@ const JudgmentBreakdown = ({ reasoning, darkMode }) => {
                   <ChevronRight className="w-4 h-4 text-gray-400 transition-transform duration-200 group-open:rotate-90" />
                   <h5 className="font-semibold text-sm text-gray-800 dark:text-gray-200">{stage}</h5>
                 </div>
-                {(stageWeight !== 0 || items.some(item => 
-                  item.weight === 0 && (
-                    item.rule.includes('Saturn in 7th house') || 
-                    item.rule.includes('Void Moon') || 
-                    item.rule.includes('early') || 
-                    item.rule.includes('late') || 
-                    item.rule.includes('warning') ||
-                    item.rule.includes('noted but')
-                  )
-                )) && (
-                  <div className="flex items-center space-x-2">
-                    <div className={`w-2 h-2 rounded-full ${getStageWeightColor(items)}`}></div>
-                    <span className={`text-xs font-medium ${
-                      stageWeight > 0 ? 'text-emerald-600 dark:text-emerald-400' :
-                      stageWeight < 0 ? 'text-red-600 dark:text-red-400' :
-                      items.some(item => 
-                        item.weight === 0 && (
-                          item.rule.includes('Saturn in 7th house') || 
-                          item.rule.includes('Void Moon') || 
-                          item.rule.includes('early') || 
-                          item.rule.includes('late') || 
-                          item.rule.includes('warning') ||
-                          item.rule.includes('noted but')
-                        )
-                      ) ? 'text-amber-600 dark:text-amber-400' :
-                      'text-gray-600 dark:text-gray-400'
-                    }`}>
-                      {stageWeight > 0 ? '+' : ''}{stageWeight !== 0 ? stageWeight : '⚠'}
-                    </span>
-                  </div>
-                )}
+                <div className="flex items-center space-x-2">
+                  <div className={`w-2 h-2 rounded-full ${getStageWeightColor(items)}`}></div>
+                  <span className={`text-xs font-medium ${
+                    stageWeight > 0 ? 'text-emerald-600 dark:text-emerald-400' :
+                    stageWeight < 0 ? 'text-red-600 dark:text-red-400' :
+                    'text-amber-600 dark:text-amber-400'
+                  }`}>
+                    {stageWeight > 0 ? '+' : ''}{stageWeight}
+                  </span>
+                </div>
               </div>
             </summary>
             
             <div className="mt-3 ml-8 space-y-3">
               {items.map((item, index) => (
                 <div key={index} className="flex items-start space-x-3 p-2 rounded-md hover:bg-gray-25 dark:hover:bg-gray-800/30 transition-colors duration-150">
-                  <div className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 shadow-sm ${getWeightColor(item.weight, item.rule)}`}></div>
+                  <div className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 shadow-sm ${getWeightColor(item.weight)}`}></div>
                   <div className="flex items-start space-x-3 flex-1">
                     {/* Score bar */}
                     <div className="flex items-center mt-1.5">
