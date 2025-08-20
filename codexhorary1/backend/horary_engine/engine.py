@@ -42,6 +42,11 @@ from .services.geolocation import (
 from .polarity_weights import TestimonyKey
 from models import Planet
 
+
+def _safe_log_str(text: str) -> str:
+    """Return an ASCII-safe representation for logging."""
+    return text.encode("ascii", errors="backslashreplace").decode("ascii")
+
 # Setup module logger
 logger = logging.getLogger(__name__)
 
@@ -189,16 +194,12 @@ class EnhancedTraditionalAstrologicalCalculator:
         jd_ut = swe.julday(dt_utc.year, dt_utc.month, dt_utc.day, 
                           dt_utc.hour + dt_utc.minute/60.0 + dt_utc.second/3600.0)
         
-        logger.info(f"Calculating chart for:")
-        logger.info(f"  Local time: {dt_local} ({timezone_info})")
-        logger.info(f"  UTC time: {dt_utc}")
-        logger.info(f"  Julian Day (UT): {jd_ut}")
-        # Safe logging with Unicode handling for location names
-        try:
-            logger.info(f"  Location: {location_name} ({lat:.4f}, {lon:.4f})")
-        except UnicodeEncodeError:
-            safe_location = location_name.encode('ascii', 'replace').decode('ascii')
-            logger.info(f"  Location: {safe_location} ({lat:.4f}, {lon:.4f})")
+        logger.info("Calculating chart for:")
+        logger.info("  Local time: %s (%s)", dt_local, timezone_info)
+        logger.info("  UTC time: %s", dt_utc)
+        logger.info("  Julian Day (UT): %s", jd_ut)
+        safe_location = _safe_log_str(location_name)
+        logger.info("  Location: %s (%.4f, %.4f)", safe_location, lat, lon)
         
         # Calculate traditional planets only
         planets = {}
@@ -825,7 +826,6 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                       manual_houses: Optional[List[int]] = None,
                       # Legacy override flags (now configurable)
                       ignore_radicality: bool = False,
-                      ignore_void_moon: bool = False,
                       ignore_combustion: bool = False,
                       ignore_saturn_7th: bool = False,
                       # Legacy reception weighting (now configurable)
@@ -874,8 +874,8 @@ class EnhancedTraditionalHoraryJudgmentEngine:
             
             # Apply enhanced judgment with configuration
             judgment = self._apply_enhanced_judgment(
-                chart, question_analysis, 
-                ignore_radicality, ignore_void_moon, ignore_combustion, ignore_saturn_7th,
+                chart, question_analysis,
+                ignore_radicality, ignore_combustion, ignore_saturn_7th,
                 exaltation_confidence_boost, window_days)
             
             # Serialize chart data for frontend
@@ -1133,7 +1133,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
     # Due to space constraints, I'll highlight the key enhanced methods
     
     def _apply_enhanced_judgment(self, chart: HoraryChart, question_analysis: Dict,
-                               ignore_radicality: bool = False, ignore_void_moon: bool = False,
+                               ignore_radicality: bool = False,
                                ignore_combustion: bool = False, ignore_saturn_7th: bool = False,
                                exaltation_confidence_boost: float = 15.0, window_days: int = None) -> Dict[str, Any]:
         """Enhanced judgment with configuration system"""
@@ -1197,25 +1197,24 @@ class EnhancedTraditionalHoraryJudgmentEngine:
             reasoning.append("Radicality: Bypassed by override (chart validity check disabled)")
 
         # 1.5. Void-of-Course Moon caution (no early return)
-        if not ignore_void_moon:
-            void_check = self._is_moon_void_of_course_enhanced(chart)
-            if void_check["void"]:
-                if void_check.get("exception"):
-                    reasoning.append(f"Void Moon noted but excepted: {void_check['reason']}")
+        void_check = self._is_moon_void_of_course_enhanced(chart)
+        if void_check["void"]:
+            if void_check.get("exception"):
+                reasoning.append(f"Void Moon noted but excepted: {void_check['reason']}")
+            else:
+                override_check = TraditionalOverrides.check_void_moon_overrides(chart, question_analysis, self)
+                if override_check.get("can_override"):
+                    reasoning.append(f"Void Moon noted but overridden: {override_check['reason']}")
                 else:
-                    override_check = TraditionalOverrides.check_void_moon_overrides(chart, question_analysis, self)
-                    if override_check.get("can_override"):
-                        reasoning.append(f"Void Moon noted but overridden: {override_check['reason']}")
-                    else:
-                        reasoning.append(f"Void Moon: {void_check['reason']}")
-                void_penalty = getattr(config.moon, "void_penalty", 10)
-                if getattr(config.moon, "void_gating", False):
-                    return {
-                        "result": "NO",
-                        "confidence": max(confidence - void_penalty, 0),
-                        "reasoning": reasoning,
-                        "timing": None,
-                    }
+                    reasoning.append(f"Void Moon: {void_check['reason']}")
+            void_penalty = getattr(config.moon, "void_penalty", 10)
+            if getattr(config.moon, "void_gating", False):
+                return {
+                    "result": "NO",
+                    "confidence": max(confidence - void_penalty, 0),
+                    "reasoning": reasoning,
+                    "timing": None,
+                }
         
         # 2. Identify significators
         significators = self._identify_significators(chart, question_analysis)
@@ -1454,7 +1453,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
 
         # PRIORITY: Determine Moon's next aspect before applying other adjustments
         moon_next_aspect_result = self._check_moon_next_aspect_to_significators(
-            chart, querent_planet, quesited_planet, ignore_void_moon
+            chart, querent_planet, quesited_planet
         )
         if perfection.get("perfects"):
             moon_next_aspect_result["decisive"] = False
@@ -1546,7 +1545,6 @@ class EnhancedTraditionalHoraryJudgmentEngine:
             quesited_planet,
             moon_next_aspect_result,
             solar_factors,
-            ignore_void_moon,
             ignore_combustion,
         )
         if blocker_eval["fatal"]:
@@ -1621,7 +1619,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                     reasoning.append("Same ruler unity indicates direct perfection")
             
             # Get Moon testimony for confidence modification (not decisive)
-            moon_testimony = self._check_enhanced_moon_testimony(chart, querent_planet, quesited_planet, ignore_void_moon)
+            moon_testimony = self._check_enhanced_moon_testimony(chart, querent_planet, quesited_planet)
             
             # FIXED: Detect conflicting testimonies and adjust confidence
             reception = self._detect_reception_between_planets(chart, querent_planet, quesited_planet)
@@ -1728,7 +1726,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
             reasoning.append("FLAG: MOON_NEXT_DECISIVE")
         
         # 3.7. Enhanced Moon testimony analysis when no decisive Moon aspect
-        moon_testimony = self._check_enhanced_moon_testimony(chart, querent_planet, quesited_planet, ignore_void_moon)
+        moon_testimony = self._check_enhanced_moon_testimony(chart, querent_planet, quesited_planet)
         
         # 4. Enhanced denial conditions (retrograde now configurable)
         denial = self._check_enhanced_denial_conditions(chart, querent_planet, quesited_planet)
@@ -2305,22 +2303,16 @@ class EnhancedTraditionalHoraryJudgmentEngine:
         
         return {"found": False}
     
-    def _check_enhanced_moon_testimony(self, chart: HoraryChart, querent: Planet, quesited: Planet,
-                                     ignore_void_moon: bool = False) -> Dict[str, Any]:
+    def _check_enhanced_moon_testimony(self, chart: HoraryChart, querent: Planet, quesited: Planet) -> Dict[str, Any]:
         """Enhanced Moon testimony with configurable void-of-course methods"""
         
         moon_pos = chart.planets[Planet.MOON]
         config = cfg()
         
         # ENHANCED: Check if Moon is void of course - now cautionary, not absolute blocker
-        void_of_course = False
-        void_reason = ""
-        
-        if not ignore_void_moon:
-            void_check = self._is_moon_void_of_course_enhanced(chart)
-            if void_check["void"] and not void_check["exception"]:
-                void_of_course = True
-                void_reason = void_check['reason']
+        void_check = self._is_moon_void_of_course_enhanced(chart)
+        void_of_course = void_check["void"] and not void_check["exception"]
+        void_reason = void_check['reason']
         
         # ENHANCED: Continue with Moon analysis even if void (traditional cautionary approach)
         # Enhanced Moon analysis with accidental dignities
@@ -3657,7 +3649,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
 
     def _evaluate_blockers(self, chart: HoraryChart, querent: Planet, quesited: Planet,
                            moon_next_aspect: Dict[str, Any], solar_factors: Dict[str, Any],
-                           ignore_void_moon: bool = False, ignore_combustion: bool = False) -> Dict[str, Any]:
+                           ignore_combustion: bool = False) -> Dict[str, Any]:
         """Collect potential blockers and rank them by severity."""
         blockers: List[Dict[str, Any]] = []
         severity_rank = {"fatal": 0, "severe": 1, "warning": 2}
@@ -3681,14 +3673,13 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                 "confidence": moon_next_aspect.get("confidence", 75),
             })
 
-        if not ignore_void_moon:
-            void_check = self._is_moon_void_of_course_enhanced(chart)
-            if void_check["void"] and not void_check.get("exception"):
-                blockers.append({
-                    "type": "void_of_course",
-                    "severity": "warning",
-                    "reason": f"Moon void of course: {void_check['reason']}",
-                })
+        void_check = self._is_moon_void_of_course_enhanced(chart)
+        if void_check["void"] and not void_check.get("exception"):
+            blockers.append({
+                "type": "void_of_course",
+                "severity": "warning",
+                "reason": f"Moon void of course: {void_check['reason']}",
+            })
 
         # Significant solar impediments to significators
         if not ignore_combustion:
@@ -3880,7 +3871,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
 
         return result, confidence
     
-    def _check_moon_next_aspect_to_significators(self, chart: HoraryChart, querent: Planet, quesited: Planet, ignore_void_moon: bool = False, question_analysis: Dict = None) -> Dict[str, Any]:
+    def _check_moon_next_aspect_to_significators(self, chart: HoraryChart, querent: Planet, quesited: Planet, question_analysis: Dict = None) -> Dict[str, Any]:
         """Check if Moon's next applying aspect to either significator is decisive (ENHANCED with L10 logic)"""
         
         next_aspect = chart.moon_next_aspect
@@ -3904,11 +3895,8 @@ class EnhancedTraditionalHoraryJudgmentEngine:
             return {"decisive": False}
         
         # Check if Moon is void of course (reduces decisiveness but doesn't eliminate)
-        void_of_course = False
-        if not ignore_void_moon:
-            void_check = self._is_moon_void_of_course_enhanced(chart)
-            if void_check["void"] and not void_check["exception"]:
-                void_of_course = True
+        void_check = self._is_moon_void_of_course_enhanced(chart)
+        void_of_course = void_check["void"] and not void_check["exception"]
         
         # Determine favorability
         favorable_aspects = [Aspect.CONJUNCTION, Aspect.SEXTILE, Aspect.TRINE]
@@ -4365,7 +4353,6 @@ class HoraryEngine:
         
         # Extract override flags
         ignore_radicality = settings.get("ignore_radicality", False)
-        ignore_void_moon = settings.get("ignore_void_moon", False)
         ignore_combustion = settings.get("ignore_combustion", False)
         ignore_saturn_7th = settings.get("ignore_saturn_7th", False)
         
@@ -4385,7 +4372,6 @@ class HoraryEngine:
             use_current_time=use_current_time,
             manual_houses=manual_houses,
             ignore_radicality=ignore_radicality,
-            ignore_void_moon=ignore_void_moon,
             ignore_combustion=ignore_combustion,
             ignore_saturn_7th=ignore_saturn_7th,
             exaltation_confidence_boost=exaltation_confidence_boost

@@ -660,8 +660,7 @@
     "override_flags_applied": {
       "ignore_combustion": false,
       "ignore_radicality": false,
-      "ignore_saturn_7th": false,
-      "ignore_void_moon": false
+      "ignore_saturn_7th": false
     },
     "timestamp": "2025-08-20T08:12:57.922838+00:00"
   },

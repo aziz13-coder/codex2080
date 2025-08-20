@@ -68,6 +68,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _safe_log_str(text: str) -> str:
+    """Return an ASCII-safe representation for logging."""
+    return text.encode("ascii", errors="backslashreplace").decode("ascii")
+
 
 app = Flask(__name__)
 
@@ -734,8 +738,6 @@ def calculate_chart():
 
         ignore_radicality = data.get('ignoreRadicality', False)
 
-        ignore_void_moon = data.get('ignoreVoidMoon', False)
-
         ignore_combustion = data.get('ignoreCombustion', False)
 
         ignore_saturn_7th = data.get('ignoreSaturn7th', False)
@@ -744,27 +746,27 @@ def calculate_chart():
 
         
 
-        logger.info(f"ENHANCED chart calculation request:")
+        logger.info("ENHANCED chart calculation request:")
 
-        logger.info(f"  Question: {question[:100]}..." if len(question) > 100 else f"  Question: {question}")
+        log_question = _safe_log_str(question[:100]) + "..." if len(question) > 100 else _safe_log_str(question)
+        logger.info("  Question: %s", log_question)
 
-        logger.info(f"  Location: {location}")
+        logger.info("  Location: %s", _safe_log_str(location))
 
-        logger.info(f"  Date: {date_str}")
+        logger.info("  Date: %s", date_str)
 
-        logger.info(f"  Time: {time_str}")
+        logger.info("  Time: %s", time_str)
 
-        logger.info(f"  Timezone: {timezone_str}")
+        logger.info("  Timezone: %s", timezone_str)
 
-        logger.info(f"  Use current time: {use_current_time}")
+        logger.info("  Use current time: %s", use_current_time)
 
         
 
         # NEW: Log enhanced parameters
 
-        if any([ignore_radicality, ignore_void_moon, ignore_combustion, ignore_saturn_7th]):
-
-            logger.info(f"  Override flags: radicality={ignore_radicality}, void_moon={ignore_void_moon}, combustion={ignore_combustion}, saturn_7th={ignore_saturn_7th}")
+        if any([ignore_radicality, ignore_combustion, ignore_saturn_7th]):
+            logger.info(f"  Override flags: radicality={ignore_radicality}, combustion={ignore_combustion}, saturn_7th={ignore_saturn_7th}")
 
         if exaltation_confidence_boost != 15.0:
 
@@ -891,9 +893,6 @@ def calculate_chart():
                 # NEW: Enhanced features
 
                 "ignore_radicality": ignore_radicality,
-
-                "ignore_void_moon": ignore_void_moon,
-
                 "ignore_combustion": ignore_combustion,
 
                 "ignore_saturn_7th": ignore_saturn_7th,
@@ -981,8 +980,6 @@ def calculate_chart():
             'override_flags_applied': {
 
                 'ignore_radicality': ignore_radicality,
-
-                'ignore_void_moon': ignore_void_moon,
 
                 'ignore_combustion': ignore_combustion,
 
@@ -1117,8 +1114,6 @@ def moon_debug():
             },
 
             'new_override_options': {
-
-                'ignore_void_moon': 'Set to true to bypass void Moon restrictions',
 
                 'ignore_combustion': 'Set to true to ignore solar condition penalties'
 

@@ -1265,7 +1265,6 @@ const EnhancedChartCasting = ({ setCurrentChart, setCurrentView, darkMode, apiSt
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [advancedOptions, setAdvancedOptions] = useState({
     ignoreRadicality: false,
-    ignoreVoidMoon: false,
     ignoreCombustion: false,
     ignoreSaturn7th: false,
     exaltationConfidenceBoost: 15.0
@@ -1362,7 +1361,6 @@ const EnhancedChartCasting = ({ setCurrentChart, setCurrentView, darkMode, apiSt
         // NEW: Include enhanced options if API is connected
         ...(apiStatus === 'connected' && {
           ignoreRadicality: advancedOptions.ignoreRadicality,
-          ignoreVoidMoon: advancedOptions.ignoreVoidMoon,
           ignoreCombustion: advancedOptions.ignoreCombustion,
           ignoreSaturn7th: advancedOptions.ignoreSaturn7th,
           exaltationConfidenceBoost: advancedOptions.exaltationConfidenceBoost
@@ -1485,7 +1483,6 @@ const EnhancedChartCasting = ({ setCurrentChart, setCurrentView, darkMode, apiSt
         },
         override_flags_applied: requestData.ignoreRadicality ? {
           ignore_radicality: requestData.ignoreRadicality,
-          ignore_void_moon: requestData.ignoreVoidMoon,
           ignore_combustion: requestData.ignoreCombustion,
           ignore_saturn_7th: requestData.ignoreSaturn7th
         } : {}
@@ -1878,23 +1875,6 @@ const EnhancedChartCasting = ({ setCurrentChart, setCurrentView, darkMode, apiSt
                           <span className="font-medium">Override Radicality Warnings</span>
                           <div className="text-xs text-gray-500 dark:text-gray-400">
                             Remove cautions and restore full confidence
-                          </div>
-                        </div>
-                      </label>
-
-                      <label className="flex items-center space-x-3 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={advancedOptions.ignoreVoidMoon}
-                          onChange={(e) => setAdvancedOptions(prev => ({
-                            ...prev, ignoreVoidMoon: e.target.checked
-                          }))}
-                          className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 rounded"
-                        />
-                        <div>
-                          <span className="font-medium">Override Void Moon Warnings</span>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            Proceed with full confidence despite void status
                           </div>
                         </div>
                       </label>
@@ -2357,9 +2337,6 @@ const EnhancedJudgmentPanel = ({ chart, darkMode }) => {
               <div className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
                 {overrideFlags.ignore_radicality && (
                   <div>• Radicality check bypassed - judgment proceeded despite traditional concerns</div>
-                )}
-                {overrideFlags.ignore_void_moon && (
-                  <div>• Void Moon restriction bypassed - judgment given despite Moon's condition</div>
                 )}
                 {overrideFlags.ignore_combustion && (
                   <div>• Solar combustion effects ignored - planets treated as free from solar interference</div>
