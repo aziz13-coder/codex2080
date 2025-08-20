@@ -47,6 +47,41 @@ from models import Planet
 logger = logging.getLogger(__name__)
 
 
+def _structure_reasoning(reasoning: List[Any]) -> List[Dict[str, Any]]:
+    """Normalize reasoning entries into structured objects.
+
+    Existing parts of the engine build reasoning as free-form strings. To
+    provide a machine-consumable format for downstream consumers (frontend,
+    tests, exports), each entry is converted into a dictionary with
+    ``stage``, ``rule`` and ``weight`` fields.
+
+    Parameters
+    ----------
+    reasoning: list
+        Original reasoning entries which may be strings or already structured
+        dictionaries.
+
+    Returns
+    -------
+    List[Dict[str, Any]]
+        Structured reasoning entries.
+    """
+
+    structured: List[Dict[str, Any]] = []
+    for entry in reasoning:
+        if isinstance(entry, dict):
+            structured.append(
+                {
+                    "stage": entry.get("stage", "analysis"),
+                    "rule": entry.get("rule", entry.get("reason", "")),
+                    "weight": entry.get("weight", entry.get("delta", 0)),
+                }
+            )
+        else:
+            structured.append({"stage": "analysis", "rule": str(entry), "weight": 0})
+    return structured
+
+
 def extract_testimonies(
     chart: Dict[str, Any], contract: Dict[str, Planet]
 ) -> List[TestimonyKey]:
@@ -879,10 +914,12 @@ class EnhancedTraditionalHoraryJudgmentEngine:
             
             # Apply enhanced judgment with configuration
             judgment = self._apply_enhanced_judgment(
-                chart, question_analysis, 
+                chart, question_analysis,
                 ignore_radicality, ignore_void_moon, ignore_combustion, ignore_saturn_7th,
                 exaltation_confidence_boost, window_days)
-            
+
+            judgment["reasoning"] = _structure_reasoning(judgment.get("reasoning", []))
+
             # Serialize chart data for frontend
             chart_data_serialized = serialize_chart_for_frontend(chart, chart.solar_analyses)
 
@@ -926,7 +963,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                 "error": str(e),
                 "judgment": "LOCATION_ERROR",
                 "confidence": 0,
-                "reasoning": [f"Location error: {e}"],
+                "reasoning": _structure_reasoning([f"Location error: {e}"]),
                 "error_type": "LocationError"
             }
         except Exception as e:
@@ -937,7 +974,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                 "error": str(e),
                 "judgment": "ERROR",
                 "confidence": 0,
-                "reasoning": [f"Calculation error: {e}"]
+                "reasoning": _structure_reasoning([f"Calculation error: {e}"])
             }
     
     def _moon_aspects_significator_directly(self, chart: HoraryChart, querent: Planet, quesited: Planet) -> bool:
@@ -4268,7 +4305,10 @@ class EnhancedTraditionalHoraryJudgmentEngine:
     def _audit_explanation_consistency(self, result: Dict[str, Any], chart: HoraryChart) -> Dict[str, Any]:
         """Audit explanation consistency to ensure reasoning matches judgment (ENHANCED)"""
         audit_notes = []
-        reasoning_text = " ".join(result.get("reasoning", []))
+        reasoning_text = " ".join(
+            r.get("rule", str(r)) if isinstance(r, dict) else str(r)
+            for r in result.get("reasoning", [])
+        )
         judgment = result.get("result", "")
         confidence = result.get("confidence", 0)
         
