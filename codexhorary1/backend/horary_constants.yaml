@@ -16,6 +16,13 @@ timing:
   slow_moon_threshold: 11.0  # degrees/day (Moon considered slow)
   fast_moon_threshold: 15.0  # degrees/day (Moon considered fast)
 
+  # Confidence decay based on time to perfection
+  decay:
+    medium_threshold_days: 30
+    medium_factor: 0.8
+    long_threshold_days: 90
+    long_factor: 0.6
+
 orbs:
   # Traditional aspect orbs (degrees)
   conjunction: 8.0
@@ -120,7 +127,7 @@ confidence:
   moon:
     to_house_10_bonus: 8         # Bonus when Moon aspects L10 ruler favorably
     to_house_10_cap_lift: 5      # Raise favorable cap from 80 → 85 when Moon → L10 harmoniously
-  
+
   # Benefic support thresholds
   benefic:
     min_support_for_overturn: 20 # Minimum benefic score needed to overturn denial
@@ -138,6 +145,12 @@ confidence:
     mutual_exaltation_bonus: 10  # configurable boost
     mixed_reception_bonus: 5
     one_way_bonus: 3
+
+debilitation_penalties:
+  dignity_threshold: -4
+  l2: 15
+  l11: 15
+  cadent_significator: 5
 
 radicality:
   # Radicality checking parameters

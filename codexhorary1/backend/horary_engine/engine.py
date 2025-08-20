@@ -1521,6 +1521,16 @@ class EnhancedTraditionalHoraryJudgmentEngine:
             # Apply consideration penalties (R1, R26) after perfection
             confidence = max(confidence - asc_penalty - void_penalty, 0)
 
+            # Apply debilitated ruler and cadent significator penalties
+            confidence = self._apply_debilitation_and_cadent_penalties(
+                confidence, chart, querent_planet, quesited_planet, reasoning
+            )
+
+            # Apply timing decay based on perfection timing
+            confidence = int(
+                self._apply_timing_decay(confidence, perfection.get("t_perfect_days"))
+            )
+
             # CRITICAL FIX 4: Apply confidence threshold (FIXED - low confidence should be NO/INCONCLUSIVE)
             result, confidence = self._apply_confidence_threshold(
                 result, confidence, reasoning
@@ -1898,16 +1908,21 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                 reasoning.append(f"Denial: {primary_issue}. Supportive signals found — {signals_text} — but total support ({total_support_score}) below overturn threshold ({overturn_threshold})")
         else:
             reasoning.append(f"Denial: {primary_issue}. No supportive signals found")
-        
+
         final_confidence = min(confidence, 75)
         if moon_next_aspect_result.get("result") == "YES" or (
             benefic_support.get("favorable") and not benefic_support_overridden
         ):
             final_confidence = min(final_confidence, 60)
 
+        # Apply debilitated ruler and cadent penalties to final confidence
+        final_confidence = self._apply_debilitation_and_cadent_penalties(
+            final_confidence, chart, querent_planet, quesited_planet, reasoning
+        )
+
         return {
             "result": "NO",
-            "confidence": final_confidence,
+            "confidence": int(final_confidence),
             "reasoning": reasoning,
             "timing": None,
             "traditional_factors": {
@@ -2094,6 +2109,66 @@ class EnhancedTraditionalHoraryJudgmentEngine:
             confidence = max(confidence - penalty, 10)
             reasoning.append(f"Retrograde quesited: -{penalty}% (turning away from success)")
 
+        return confidence
+
+    def _apply_debilitation_and_cadent_penalties(
+        self,
+        confidence: float,
+        chart: HoraryChart,
+        querent: Planet,
+        quesited: Planet,
+        reasoning: List[str],
+    ) -> float:
+        """Apply penalties for debilitated L2/L11 and cadent significators."""
+
+        penalties = getattr(cfg(), "debilitation_penalties", None)
+        if not penalties:
+            return confidence
+
+        threshold = getattr(penalties, "dignity_threshold", -5)
+
+        l2 = chart.house_rulers.get(2)
+        if l2:
+            l2_pos = chart.planets[l2]
+            if l2_pos.dignity_score <= threshold:
+                penalty = getattr(penalties, "l2", 0)
+                confidence = max(confidence - penalty, 0)
+                reasoning.append(f"Debilitated L2 ruler ({l2.value}): -{penalty}%")
+
+        l11 = chart.house_rulers.get(11)
+        if l11:
+            l11_pos = chart.planets[l11]
+            if l11_pos.dignity_score <= threshold:
+                penalty = getattr(penalties, "l11", 0)
+                confidence = max(confidence - penalty, 0)
+                reasoning.append(f"Debilitated L11 ruler ({l11.value}): -{penalty}%")
+
+        cadent_penalty = getattr(penalties, "cadent_significator", 0)
+        for planet in [querent, quesited]:
+            pos = chart.planets.get(planet)
+            if pos:
+                angularity = self.calculator._get_traditional_angularity(
+                    pos.longitude, chart.houses, pos.house
+                )
+                if angularity == "cadent":
+                    confidence = max(confidence - cadent_penalty, 0)
+                    reasoning.append(
+                        f"Cadent {planet.value}: -{cadent_penalty}%"
+                    )
+
+        return confidence
+
+    def _apply_timing_decay(self, confidence: float, t_perfect_days: Optional[float]) -> float:
+        """Apply confidence decay for long perfection timeframes."""
+
+        decay_cfg = getattr(getattr(cfg(), "timing", {}), "decay", None)
+        if not decay_cfg or t_perfect_days is None:
+            return confidence
+
+        if t_perfect_days > getattr(decay_cfg, "long_threshold_days", float("inf")):
+            return confidence * getattr(decay_cfg, "long_factor", 1.0)
+        if t_perfect_days > getattr(decay_cfg, "medium_threshold_days", float("inf")):
+            return confidence * getattr(decay_cfg, "medium_factor", 1.0)
         return confidence
     
     def _check_enhanced_translation_of_light(self, chart: HoraryChart, querent: Planet, quesited: Planet) -> Dict[str, Any]:
