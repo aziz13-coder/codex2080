@@ -308,6 +308,15 @@ const JudgmentBreakdown = ({ reasoning, darkMode }) => {
     });
   }, [reasoning]);
 
+  // Determine the maximum absolute weight across all testimonies
+  const maxWeight = useMemo(() => {
+    return structuredReasoning.reduce((max, item) => {
+      const absWeight = Math.abs(item.weight || 0);
+      return absWeight > max ? absWeight : max;
+      // This ensures bars are scaled relative to the strongest testimony
+    }, 0);
+  }, [structuredReasoning]);
+
   // Group by stage
   const groupedByStage = useMemo(() => {
     const groups = {};
@@ -376,9 +385,9 @@ const JudgmentBreakdown = ({ reasoning, darkMode }) => {
                             item.weight > 0 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' : 
                             item.weight < 0 ? 'bg-gradient-to-r from-red-400 to-red-500' : 'bg-gradient-to-r from-amber-400 to-amber-500'
                           }`}
-                          style={{ 
-                            width: `${Math.min(Math.abs(item.weight) * 40 + 30, 100)}%`, 
-                            marginLeft: item.weight >= 0 ? '0' : 'auto' 
+                          style={{
+                            width: maxWeight ? `${(Math.abs(item.weight) / maxWeight) * 100}%` : '0%',
+                            marginLeft: item.weight >= 0 ? '0' : 'auto'
                           }}
                         />
                       </div>
