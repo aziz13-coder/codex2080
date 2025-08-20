@@ -3,8 +3,12 @@ from __future__ import annotations
 
 from typing import Dict
 
-from backend.models import Planet
-from backend.taxonomy import Category, get_defaults, resolve_category
+try:
+    from .models import Planet
+    from .taxonomy import Category, get_defaults, resolve_category
+except ImportError:  # pragma: no cover - fallback when executed as script
+    from models import Planet
+    from taxonomy import Category, get_defaults, resolve_category
 
 
 def get_contract(category: str | Category) -> Dict[str, Planet]:

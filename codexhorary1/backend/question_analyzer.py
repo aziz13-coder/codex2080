@@ -2,7 +2,10 @@ from typing import Dict, Any, List
 import re
 import logging
 
-from backend.taxonomy import Category
+try:
+    from .taxonomy import Category
+except ImportError:  # pragma: no cover - fallback for script execution
+    from taxonomy import Category
 
 logger = logging.getLogger(__name__)
 

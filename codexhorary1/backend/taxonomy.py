@@ -4,7 +4,10 @@ import logging
 from enum import Enum
 from typing import Any, Dict, Optional
 
-from backend.models import Planet
+try:
+    from .models import Planet
+except ImportError:  # pragma: no cover - fallback when executed as script
+    from models import Planet
 
 logger = logging.getLogger(__name__)
 
