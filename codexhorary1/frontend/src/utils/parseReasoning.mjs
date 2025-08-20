@@ -2,30 +2,13 @@ export function parseReasoningEntry(text) {
   if (typeof text !== 'string') {
     return { rule: '', weight: 0 };
   }
-  const matches = [...text.matchAll(/[-+]?\d+%?/g)];
-  if (matches.length === 0) {
-    return { rule: text.trim(), weight: 0 };
+  const parenMatch = text.match(/\(([-+]?\d+)\s*%?\)\s*$/);
+  if (parenMatch) {
+    return { rule: text.slice(0, parenMatch.index).trim(), weight: parseInt(parenMatch[1], 10) || 0 };
   }
-  const last = matches[matches.length - 1];
-  const token = last[0];
-  let weight = parseInt(token, 10) || 0;
-  let start = last.index;
-  let end = start + token.length;
-
-  let before = text.slice(0, start);
-  let after = text.slice(end);
-
-  const beforeParen = before.match(/\(\s*$/);
-  const afterParen = after.match(/^\s*\)/);
-  if (beforeParen && afterParen) {
-    start -= beforeParen[0].length;
-    end += afterParen[0].length;
-    before = text.slice(0, start);
-    after = text.slice(end);
+  const signedMatch = text.match(/([-+]\d+)\s*%?\s*$/);
+  if (signedMatch) {
+    return { rule: text.slice(0, signedMatch.index).trim(), weight: parseInt(signedMatch[1], 10) || 0 };
   }
-
-  before = before.replace(/\s+$/, '');
-  after = after.replace(/^\s+/, '');
-  const rule = `${before}${before && after ? ' ' : ''}${after}`.trim();
-  return { rule, weight };
+  return { rule: text.trim(), weight: 0 };
 }

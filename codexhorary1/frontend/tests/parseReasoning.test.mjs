@@ -29,3 +29,9 @@ test('uses last numeric token when multiple present', () => {
   assert.strictEqual(weight, -4);
   assert.strictEqual(rule, 'Mixed signals (+3)');
 });
+
+test('ignores numeric references embedded in text', () => {
+  const { rule, weight } = parseReasoningEntry('Ruler of 7');
+  assert.strictEqual(weight, 0);
+  assert.strictEqual(rule, 'Ruler of 7');
+});
