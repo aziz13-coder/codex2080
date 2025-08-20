@@ -107,6 +107,7 @@ from models import (
     HoraryChart,
 )
 from question_analyzer import TraditionalHoraryQuestionAnalyzer
+from backend.taxonomy import Category, resolve_category
 from .reception import TraditionalReceptionCalculator
 from .aspects import (
     calculate_enhanced_aspects,
@@ -1139,6 +1140,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
         
         reasoning = []
         config = cfg()
+        question_type = resolve_category(question_analysis.get("question_type"))
         
         # Initialize evidence ledger
         evidence_ledger = {
@@ -1440,7 +1442,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                 }
 
         # GENERAL ENHANCEMENT: Check Moon-Sun aspects in education questions (traditional co-significator analysis)
-        if not perfection["perfects"] and question_analysis.get("question_type") == "education":
+        if not perfection["perfects"] and question_type == Category.EDUCATION:
             moon_sun_perfection = self._check_moon_sun_education_perfection(
                 chart, question_analysis
             )
@@ -1740,7 +1742,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
             }
         
         # 4.5. ENHANCED: Check theft/loss-specific denial factors
-        theft_denials = self._check_theft_loss_specific_denials(chart, question_analysis.get("question_type"), querent_planet, quesited_planet)
+        theft_denials = self._check_theft_loss_specific_denials(chart, question_type, querent_planet, quesited_planet)
         if theft_denials:
             combined_theft_denial = "; ".join(theft_denials)
             return {
@@ -1778,7 +1780,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
             reasoning.append(f"Note: {benefic_support['reason']} (secondary testimony)")
         
         # 6. PREGNANCY-SPECIFIC: Check for Moon→benefic OR L1↔L5 reception (FIXED: don't auto-deny)
-        if question_analysis.get("question_type") == "pregnancy":
+        if question_type == Category.PREGNANCY:
             # Check for L1↔L5 reception (already fixed)
             reception = self._detect_reception_between_planets(chart, querent_planet, quesited_planet)
             has_reception = reception != "none"
@@ -3889,7 +3891,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
         
         # Check for L10 ruler in education questions
         l10_ruler = None
-        is_education = question_analysis and question_analysis.get("question_type") == "education"
+        is_education = question_analysis and question_type == Category.EDUCATION
         if is_education:
             l10_ruler = chart.house_rulers.get(10)
         
@@ -4107,12 +4109,12 @@ class EnhancedTraditionalHoraryJudgmentEngine:
             "combustion_ignored": ignore_combustion
         }
     
-    def _check_theft_loss_specific_denials(self, chart: HoraryChart, question_type: str, 
+    def _check_theft_loss_specific_denials(self, chart: HoraryChart, question_type: Category,
                                          querent_planet: Planet, quesited_planet: Planet) -> List[str]:
         """Check for traditional theft/loss-specific denial factors (ENHANCED)"""
         denial_reasons = []
         
-        if question_type != "lost_object":
+        if question_type != Category.LOST_OBJECT:
             return denial_reasons
         
         config = cfg()
