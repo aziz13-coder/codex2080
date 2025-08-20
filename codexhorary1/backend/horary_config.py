@@ -131,7 +131,6 @@ class HoraryConfig:
         required_keys = [
             'timing.default_moon_speed_fallback',
             'orbs.conjunction',
-            'moon.void_rule',
             'confidence.base_confidence',
             'confidence.lunar_confidence_caps.favorable',
             'confidence.lunar_confidence_caps.unfavorable',

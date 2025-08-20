@@ -2307,7 +2307,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
     
     def _check_enhanced_moon_testimony(self, chart: HoraryChart, querent: Planet, quesited: Planet,
                                      ignore_void_moon: bool = False) -> Dict[str, Any]:
-        """Enhanced Moon testimony with configurable void-of-course methods"""
+        """Enhanced Moon testimony using the traditional void-of-course rule"""
         
         moon_pos = chart.planets[Planet.MOON]
         config = cfg()
@@ -4470,7 +4470,6 @@ def get_configuration_info() -> Dict[str, Any]:
                 "max_future_days": config.get('timing.max_future_days')
             },
             "moon": {
-                "void_rule": config.get('moon.void_rule'),
                 "translation_require_speed": config.get('moon.translation.require_speed_advantage', True)
             },
             "confidence": {

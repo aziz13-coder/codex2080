@@ -4615,7 +4615,6 @@ const Settings = ({ darkMode, toggleDarkMode, setCurrentView, apiStatus, onRefre
           type: "group",
           items: [
             { name: "Void Penalty", type: "slider", value: 10, min: 0, max: 30, step: 1 },
-            { name: "Void Rule", type: "select", options: ["by_sign", "by_orb", "lilly"], value: "by_sign" },
             { name: "Moon in Cancer Exception", type: "toggle", value: true },
             { name: "Moon in Sagittarius Exception", type: "toggle", value: true }
           ]
