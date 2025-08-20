@@ -42,9 +42,6 @@ orbs:
   cazimi_orb_arcmin: 17  # arcminutes
   combustion_orb: 8.5    # degrees
   under_beams_orb: 15.0  # degrees
-  
-  # Void-of-course orbs by method
-  void_orb_deg: 1.0  # for "by_orb" method
 
 moon:
   # Moon testimony and accidental dignity modifiers
