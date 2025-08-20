@@ -76,8 +76,7 @@ moon:
   void_gating: false  # R26 gating disabled in favor of confidence penalty
   void_penalty: 10    # Confidence penalty applied when Moon is void-of-course
 
-  # Allow Moon applications that perfect after a sign change
-  allow_out_of_sign_applications: true
+  # Out-of-sign applications are ignored; cross-sign perfection is disallowed
 
   # Translation and collection requirements
   translation:
