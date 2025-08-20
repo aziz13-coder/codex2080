@@ -69,8 +69,26 @@ class TraditionalReceptionCalculator:
             planet1, planet2, reception_1_to_2, reception_2_to_1
         )
 
+        # Serialize one-way receptions for structured output
+        one_way: List[str] = []
+        for dignity in reception_1_to_2:
+            label = "sign" if dignity == "domicile" else dignity
+            one_way.append(f"{planet1.value}↦{planet2.value}({label})")
+        for dignity in reception_2_to_1:
+            label = "sign" if dignity == "domicile" else dignity
+            one_way.append(f"{planet2.value}↦{planet1.value}({label})")
+
+        # Only mutual receptions (including mixed) count for mutual field
+        mutual_type = (
+            reception_type
+            if reception_type.startswith("mutual") or reception_type == "mixed_reception"
+            else "none"
+        )
+
         return {
-            "type": reception_type,  # none, mutual_rulership, mutual_exaltation, mixed_reception, unilateral
+            "type": reception_type,  # legacy field for existing logic
+            "mutual": mutual_type,
+            "one_way": one_way,
             "details": reception_details,
             "planet1_receives_planet2": reception_1_to_2,
             "planet2_receives_planet1": reception_2_to_1,

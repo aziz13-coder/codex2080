@@ -137,6 +137,7 @@ confidence:
     mutual_rulership_bonus: 15
     mutual_exaltation_bonus: 10  # configurable boost
     mixed_reception_bonus: 5
+    one_way_bonus: 3
 
 radicality:
   # Radicality checking parameters

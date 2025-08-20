@@ -1839,10 +1839,22 @@ class EnhancedTraditionalHoraryJudgmentEngine:
         total_support_score = 0
         
         # Reception support
-        reception = self._detect_reception_between_planets(chart, querent_planet, quesited_planet)
-        if reception != "none":
-            reception_bonus = getattr(config.confidence.reception, f"{reception}_bonus", 5)
-            supportive_signals.append(f"{reception} (+{reception_bonus})")
+        reception_info = self.reception_calculator.calculate_comprehensive_reception(
+            chart, querent_planet, quesited_planet
+        )
+        mutual = reception_info.get("mutual", "none")
+        one_way = reception_info.get("one_way", [])
+        if mutual != "none":
+            reception_bonus = getattr(
+                config.confidence.reception, f"{mutual}_bonus", 5
+            )
+            supportive_signals.append(f"{mutual} (+{reception_bonus})")
+            total_support_score += reception_bonus
+        elif one_way:
+            reception_bonus = getattr(
+                config.confidence.reception, "one_way_bonus", 3
+            )
+            supportive_signals.append(f"one-way reception (+{reception_bonus})")
             total_support_score += reception_bonus
         
         # Moon testimony support (check for Moon aspects to significators or benefics)
@@ -3850,10 +3862,10 @@ class EnhancedTraditionalHoraryJudgmentEngine:
         """Get complete reception data for structured output - prevents contradictions"""
         reception_data = self.reception_calculator.calculate_comprehensive_reception(chart, planet1, planet2)
         return {
-            "type": reception_data["type"],
+            "mutual": reception_data["mutual"],
+            "one_way": reception_data["one_way"],
             "display_text": reception_data["display_text"],
             "strength": reception_data["traditional_strength"],
-            "details": reception_data["details"]
         }
     
     def _check_dignified_reception(self, chart: HoraryChart, receiving_planet: Planet, received_planet: Planet) -> bool:
