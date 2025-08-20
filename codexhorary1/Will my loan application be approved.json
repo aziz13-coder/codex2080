@@ -1,5 +1,5 @@
 {
-  "id": 1755677041192,
+  "id": 1755705702892,
   "question": "Will my loan application be approved?",
   "category": "general",
   "asked_at_local": "5/27/2004, 3:29:00 PM",
@@ -38,7 +38,7 @@
       "planet2": "Moon"
     },
     {
-      "applying": true,
+      "applying": false,
       "aspect": "Square",
       "degrees_to_exact": 3.11,
       "exact_time": null,
@@ -266,10 +266,11 @@
     }
   },
   "traditional_factors": {
-    "perfection_type": "direct_timed",
+    "benefic_noted": true,
+    "perfection_type": "none",
     "querent_strength": -4,
     "quesited_strength": -3,
-    "reception": "none"
+    "reception": "unilateral"
   },
   "solar_factors": {
     "cazimi_count": 0,
@@ -352,16 +353,20 @@
     "under_beams_count": 0
   },
   "verdict": {
-    "label": "YES",
-    "confidence": 82,
+    "label": "NO",
+    "confidence": 55,
     "rationale": [
       "Radicality: Chart is radical - Ascendant at 5.2°",
       "Significators: Querent: Venus (ruler of 1), Quesited: Mars (ruler of 7)",
-      "Perfection found: Future Conjunction between Venus and Mars in 18.2 days"
+      "Note: Jupiter ⚹ Mars (separating) (secondary testimony)",
+      "Denial: no perfection between significators. Supportive signals found — one-way reception (+3) and Jupiter ⚹ Mars (separating) (+9) — but total support (12) below overturn threshold (20)",
+      "Cadent Venus: -5%"
     ]
   },
-  "key_testimonies": [],
-  "keyTestimoniesText": "",
+  "key_testimonies": [
+    "• Denial: no perfection between significators. Supportive signals found — one-way reception (+3) and Jupiter ⚹ Mars (separating) (+9) — but total support (12) below overturn threshold (20)"
+  ],
+  "keyTestimoniesText": "• Denial: no perfection between significators. Supportive signals found — one-way reception (+3) and Jupiter ⚹ Mars (separating) (+9) — but total support (12) below overturn threshold (20)",
   "chart_data": {
     "ascendant": 185.1973,
     "aspects": [
@@ -375,7 +380,7 @@
         "planet2": "Moon"
       },
       {
-        "applying": true,
+        "applying": false,
         "aspect": "Square",
         "degrees_to_exact": 3.11,
         "exact_time": null,
@@ -698,7 +703,7 @@
   },
   "calculation_metadata": {
     "api_version": "2.0.0",
-    "calculation_time_seconds": 0.6074159145355225,
+    "calculation_time_seconds": 0.48165130615234375,
     "engine_version": "Enhanced Traditional Horary 2.0",
     "enhanced_features_used": {
       "directional_motion_awareness": true,
@@ -719,7 +724,7 @@
       "ignore_saturn_7th": false,
       "ignore_void_moon": false
     },
-    "timestamp": "2025-08-20T08:04:01.184920+00:00"
+    "timestamp": "2025-08-20T16:01:42.888931+00:00"
   },
   "notes": ""
 }
