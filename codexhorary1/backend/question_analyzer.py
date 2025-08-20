@@ -2,6 +2,8 @@ from typing import Dict, Any, List
 import re
 import logging
 
+from backend.taxonomy import Category
+
 logger = logging.getLogger(__name__)
 
 
@@ -27,30 +29,30 @@ class TraditionalHoraryQuestionAnalyzer:
         
         # ENHANCED: Comprehensive traditional horary question patterns
         self.question_patterns = {
-            "lost_object": ["where is", "lost", "missing", "find", "stolen", "disappeared", "locate"],
-            "marriage": ["marry", "wedding", "spouse", "husband", "wife", "engagement", "propose"],
-            "pregnancy": ["pregnant", "conceive", "conception", "expecting", "baby", "fertility"],
-            "children": ["child", "children", "son", "daughter", "offspring", "kids"],
-            "travel": ["journey", "travel", "trip", "go to", "visit", "vacation", "move to"],
-            "gambling": ["lottery", "lotto", "win lottery", "jackpot", "scratch", "raffle", "betting", "bet", "gamble", "gambling", "casino", "poker", "blackjack", "slots", "dice", "win money", "lucky", "speculation"],
-            "funding": ["funding", "fund", "investment", "invest", "investor", "funding round", "seed", "series a", "series b", "venture capital", "vc", "angel", "capital", "raise money", "raise capital", "secure funding", "startup funding", "business loan", "finance", "financial backing", "sponsor", "grant", "equity", "valuation"],
-            "money": ["money", "wealth", "rich", "profit", "gain", "debt", "financial", "income", "salary", "pay", "trading", "stock"],
-            "career": ["job", "career", "work", "employment", "business", "promotion", "interview"],
-            "health": ["sick", "illness", "disease", "health", "recover", "die", "cure", "healing", "medical"],
-            "lawsuit": ["court", "lawsuit", "legal", "judge", "trial", "litigation", "case"],
-            "relationship": ["love", "relationship", "friend", "enemy", "romance", "dating", "go out", "go out with", "date", "ask out", "see each other", "like me", "interested in", "attracted to", "reconciliation", "reconcile", "get back together", "ex", "former", "past relationship", "breakup", "break up", "makeup", "make up", "together", "couple", "partner", "boyfriend", "girlfriend", "romantic", "crush", "feelings", "attraction"],
+            Category.LOST_OBJECT: ["where is", "lost", "missing", "find", "stolen", "disappeared", "locate"],
+            Category.MARRIAGE: ["marry", "wedding", "spouse", "husband", "wife", "engagement", "propose"],
+            Category.PREGNANCY: ["pregnant", "conceive", "conception", "expecting", "baby", "fertility"],
+            Category.CHILDREN: ["child", "children", "son", "daughter", "offspring", "kids"],
+            Category.TRAVEL: ["journey", "travel", "trip", "go to", "visit", "vacation", "move to"],
+            Category.GAMBLING: ["lottery", "lotto", "win lottery", "jackpot", "scratch", "raffle", "betting", "bet", "gamble", "gambling", "casino", "poker", "blackjack", "slots", "dice", "win money", "lucky", "speculation"],
+            Category.FUNDING: ["funding", "fund", "investment", "invest", "investor", "funding round", "seed", "series a", "series b", "venture capital", "vc", "angel", "capital", "raise money", "raise capital", "secure funding", "startup funding", "business loan", "finance", "financial backing", "sponsor", "grant", "equity", "valuation"],
+            Category.MONEY: ["money", "wealth", "rich", "profit", "gain", "debt", "financial", "income", "salary", "pay", "trading", "stock"],
+            Category.CAREER: ["job", "career", "work", "employment", "business", "promotion", "interview"],
+            Category.HEALTH: ["sick", "illness", "disease", "health", "recover", "die", "cure", "healing", "medical"],
+            Category.LAWSUIT: ["court", "lawsuit", "legal", "judge", "trial", "litigation", "case"],
+            Category.RELATIONSHIP: ["love", "relationship", "friend", "enemy", "romance", "dating", "go out", "go out with", "date", "ask out", "see each other", "like me", "interested in", "attracted to", "reconciliation", "reconcile", "get back together", "ex", "former", "past relationship", "breakup", "break up", "makeup", "make up", "together", "couple", "partner", "boyfriend", "girlfriend", "romantic", "crush", "feelings", "attraction"],
             # NEW: Education and learning patterns
-            "education": ["exam", "test", "study", "student", "school", "college", "university", "learn", "pass", "graduate", "degree", "education", "academic", "course", "class", "conference", "paper", "publication", "publish", "journal", "research", "submit", "accepted", "peer review", "review", "presentation", "symposium", "seminar", "physiotherapy", "nursing", "medical", "certification"],
-            # NEW: Specific person relationship patterns  
-            "parent": ["father", "mother", "dad", "mom", "parent", "stepfather", "stepmother"],
-            "sibling": ["brother", "sister", "sibling"],
-            "friend_enemy": ["friend", "enemy", "ally", "rival", "competitor"],
+            Category.EDUCATION: ["exam", "test", "study", "student", "school", "college", "university", "learn", "pass", "graduate", "degree", "education", "academic", "course", "class", "conference", "paper", "publication", "publish", "journal", "research", "submit", "accepted", "peer review", "review", "presentation", "symposium", "seminar", "physiotherapy", "nursing", "medical", "certification"],
+            # NEW: Specific person relationship patterns
+            Category.PARENT: ["father", "mother", "dad", "mom", "parent", "stepfather", "stepmother"],
+            Category.SIBLING: ["brother", "sister", "sibling"],
+            Category.FRIEND_ENEMY: ["friend", "enemy", "ally", "rival", "competitor"],
             # NEW: Property and housing
-            "property": ["house", "home", "property", "real estate", "land", "apartment", "buy house", "sell house"],
+            Category.PROPERTY: ["house", "home", "property", "real estate", "land", "apartment", "buy house", "sell house"],
             # NEW: Death and inheritance
-            "death": ["death", "die", "inheritance", "testament", "legacy", "last will", "will and testament"],
+            Category.DEATH: ["death", "die", "inheritance", "testament", "legacy", "last will", "will and testament"],
             # NEW: Spiritual and religious
-            "spiritual": ["god", "religion", "spiritual", "prayer", "divine", "faith", "church"]
+            Category.SPIRITUAL: ["god", "religion", "spiritual", "prayer", "divine", "faith", "church"],
         }
         
         # Person keywords mapped to their traditional houses
@@ -215,7 +217,7 @@ class TraditionalHoraryQuestionAnalyzer:
         # DEBUG: Emit classification traceability information
         logger.debug(
             "category=%s, matched=%s, houses=%s",
-            question_type,
+            question_type.value,
             matched_pattern,
             houses,
         )
@@ -296,17 +298,17 @@ class TraditionalHoraryQuestionAnalyzer:
         if any(word in question_lower for word in sale_indicators):
             # Detect valuable items using traditional natural significators
             natural_significator = self._detect_natural_significator(question_lower)
-            
+
             if natural_significator:
                 return {
-                    "type": "money", 
-                    "houses": [1, 7], 
+                    "type": Category.MONEY,
+                    "houses": [1, 7],
                     "natural_significators": natural_significator,
-                    "transaction_context": True
+                    "transaction_context": True,
                 }
             else:
                 # General sale: seller + buyer
-                return {"type": "money", "houses": [1, 7]}
+                return {"type": Category.MONEY, "houses": [1, 7]}
         
         # POSSESSION questions (does X own Y?) use house derivation
         possession_indicators = ["property", "money", "possessions", "belongings", "assets"]
@@ -314,18 +316,18 @@ class TraditionalHoraryQuestionAnalyzer:
             # Determine whose possessions - check for other people first, then default to querent
             if re.search(r"\b(his|her|husband|wife|spouse)\b", question_lower):
                 # Partner's possessions = 8th house (2nd from 7th)
-                return {"type": "money", "houses": [1, 7, 8]}  # Querent + partner + partner's possessions
+                return {"type": Category.MONEY, "houses": [1, 7, 8]}  # Querent + partner + partner's possessions
             elif re.search(r"\b(father|dad)\b", question_lower):
                 # Father's possessions = 5th house (2nd from 4th)
-                return {"type": "money", "houses": [1, 4, 5]}
+                return {"type": Category.MONEY, "houses": [1, 4, 5]}
             elif re.search(r"\b(mother|mom)\b", question_lower):
                 # Mother's possessions = 11th house (2nd from 10th)
-                return {"type": "money", "houses": [1, 10, 11]}
+                return {"type": Category.MONEY, "houses": [1, 10, 11]}
             elif re.search(r"\b(my|i|will i)\b", question_lower):
-                return {"type": "money", "houses": [1, 2]}  # Querent's possessions
+                return {"type": Category.MONEY, "houses": [1, 2]}  # Querent's possessions
             else:
                 # Default: assume querent's possessions if no person specified
-                return {"type": "money", "houses": [1, 2]}
+                return {"type": Category.MONEY, "houses": [1, 2]}
         
         return None
     
@@ -338,43 +340,43 @@ class TraditionalHoraryQuestionAnalyzer:
             "vehicles": {
                 "keywords": ["car", "vehicle", "automobile", "truck", "motorcycle", "bike"],
                 "significator": "sun",  # Sun = valuable possessions, status symbols
-                "category": "vehicle"
+                "category": Category.VEHICLE,
             },
-            
+
             # Real Estate
             "real_estate": {
                 "keywords": ["house", "home", "property", "building", "land", "estate"],
                 "significator": "moon",  # Moon = home, real estate (4th house connection)
-                "category": "property"
+                "category": Category.PROPERTY,
             },
-            
+
             # Precious Items
             "precious_items": {
                 "keywords": ["jewelry", "gold", "silver", "diamond", "ring", "watch", "precious"],
                 "significator": "venus",  # Venus = luxury items, beauty, value
-                "category": "precious"
+                "category": Category.PRECIOUS,
             },
-            
+
             # Technology
             "technology": {
                 "keywords": ["computer", "phone", "laptop", "electronics", "device", "gadget"],
                 "significator": "mercury",  # Mercury = communication, technology
-                "category": "technology"
+                "category": Category.TECHNOLOGY,
             },
-            
-            # Livestock & Animals  
+
+            # Livestock & Animals
             "livestock": {
                 "keywords": ["horse", "cattle", "cow", "livestock", "animal"],
                 "significator": "mars",  # Mars = large animals (traditional)
-                "category": "livestock"
+                "category": Category.LIVESTOCK,
             },
-            
+
             # Boats & Ships
             "maritime": {
                 "keywords": ["boat", "ship", "yacht", "vessel"],
                 "significator": "moon",  # Moon = water-related items
-                "category": "maritime"
-            }
+                "category": Category.MARITIME,
+            },
         }
         
         # Detect which category matches
@@ -389,18 +391,18 @@ class TraditionalHoraryQuestionAnalyzer:
         
         return None
     
-    def _determine_question_type(self, question: str) -> tuple:
+    def _determine_question_type(self, question: str) -> tuple[Category, List[str]]:
         """Enhanced question type determination with transaction and possession priority"""
         
         # PRIORITY 1: Financial transactions override relationship keywords
         transaction_words = ["sell", "buy", "purchase", "sale", "profit", "gain", "lose", "cost", "price", "payment", "trade", "exchange"]
         if any(word in question for word in transaction_words):
-            return "money", [word for word in transaction_words if word in question]
+            return Category.MONEY, [word for word in transaction_words if word in question]
         
         # PRIORITY 2: Possession/property questions override person keywords  
         possession_words = ["car", "house", "vehicle", "property", "possessions", "belongings", "assets", "furniture", "jewelry", "valuables"]
         if any(word in question for word in possession_words):
-            return "money", [word for word in possession_words if word in question]
+            return Category.MONEY, [word for word in possession_words if word in question]
         
         # ENHANCED: Priority-based matching to handle overlapping keywords
         # Some words like "paralegal" contain "legal" but should match "education" not "lawsuit"
@@ -426,7 +428,7 @@ class TraditionalHoraryQuestionAnalyzer:
                 matches.append((q_type, matched_keywords))
         
         if not matches:
-            return "general", []
+            return Category.GENERAL, []
 
         # If only one match, return it
         if len(matches) == 1:
@@ -438,9 +440,9 @@ class TraditionalHoraryQuestionAnalyzer:
         lawsuit_match = None
 
         for q_type, matched_keywords in matches:
-            if q_type == "education":
+            if q_type == Category.EDUCATION:
                 education_match = (q_type, matched_keywords)
-            elif q_type == "lawsuit":
+            elif q_type == Category.LAWSUIT:
                 lawsuit_match = (q_type, matched_keywords)
         
         # If both education and lawsuit match, prefer education for exam/student contexts
@@ -448,16 +450,16 @@ class TraditionalHoraryQuestionAnalyzer:
             # Check for strong education indicators
             education_indicators = ["exam", "test", "student", "school", "college", "university", "pass", "graduate"]
             if any(indicator in question for indicator in education_indicators):
-                return "education", education_match[1]
+                return Category.EDUCATION, education_match[1]
             # Check for strong legal indicators  
             legal_indicators = ["court", "lawsuit", "judge", "trial", "litigation", "case"]
             if any(indicator in question for indicator in legal_indicators):
-                return "lawsuit", lawsuit_match[1]
+                return Category.LAWSUIT, lawsuit_match[1]
 
         # Default: return the first match (maintains original behavior for other cases)
         return matches[0][0], matches[0][1]
     
-    def _determine_houses(self, question: str, question_type: str, third_person_analysis: Dict = None) -> tuple:
+    def _determine_houses(self, question: str, question_type: Category, third_person_analysis: Dict = None) -> tuple:
         """ENHANCED: Determine houses using comprehensive traditional horary rules"""
         
         # Start with querent (always 1st house)
@@ -469,31 +471,31 @@ class TraditionalHoraryQuestionAnalyzer:
             return possession_analysis["houses"], possession_analysis
         
         # ENHANCED: Comprehensive house determination
-        if question_type == "lost_object":
+        if question_type == Category.LOST_OBJECT:
             houses.append(2)  # Moveable possessions
-            
-        elif question_type == "marriage" or "spouse" in question:
+
+        elif question_type == Category.MARRIAGE or "spouse" in question:
             houses.append(7)  # Marriage/spouse
-            
-        elif question_type == "relationship":
+
+        elif question_type == Category.RELATIONSHIP:
             # ENHANCED: Relationship questions use L1/L7 axis (self vs others)
             houses.extend([1, 7])  # L1 = self, L7 = other person/partner
-            
-        elif question_type == "pregnancy":
+
+        elif question_type == Category.PREGNANCY:
             if third_person_analysis and third_person_analysis.get("is_third_person"):
                 subject_house = third_person_analysis["subject_house"]
                 pregnancy_house = self._apply_house_derivation(subject_house, 5)
                 houses.extend([subject_house, pregnancy_house])
             else:
                 houses.append(5)  # Pregnancy and children
-            
-        elif question_type == "children":
+
+        elif question_type == Category.CHILDREN:
             houses.append(5)  # Children
-            
-        elif question_type == "gambling":
+
+        elif question_type == Category.GAMBLING:
             houses.append(5)  # Gambling, speculation, lottery - 5th house pleasure/risk
-            
-        elif question_type == "travel":
+
+        elif question_type == Category.TRAVEL:
             # Enhanced long-distance travel detection
             long_distance_keywords = [
                 "far", "foreign", "abroad", "overseas", "international", 
@@ -509,7 +511,7 @@ class TraditionalHoraryQuestionAnalyzer:
             # Traditional horary often looks at 6th house for travel illness
             houses.append(6)  # Health/illness during travel
                 
-        elif question_type == "funding":
+        elif question_type == Category.FUNDING:
             # ENHANCED: Funding questions use L2/L8 axis (self resources vs others' money)
             if any(word in question for word in ["secure", "get", "receive", "obtain", "raise", "from investors", "investor", "vc", "angel"]):
                 houses.extend([1, 8])  # L1 = querent, L8 = funding from others/investors
@@ -518,24 +520,24 @@ class TraditionalHoraryQuestionAnalyzer:
             else:
                 houses.extend([2, 8])  # Default: both self resources and others' money
             
-        elif question_type == "money":
+        elif question_type == Category.MONEY:
             if any(word in question for word in ["debt", "loan", "owe", "borrow"]):
                 houses.append(8)  # Debts and others' money
             else:
                 houses.append(2)  # Personal money/possessions
                 
-        elif question_type == "career":
+        elif question_type == Category.CAREER:
             houses.append(10)  # Career/reputation/profession
             
-        elif question_type == "health":
+        elif question_type == Category.HEALTH:
             # ENHANCED: Health questions use L1/L6 axis (self vs illness)
             houses.extend([1, 6])  # L1 = self/vitality, L6 = illness/disease
                 
-        elif question_type == "lawsuit":
+        elif question_type == Category.LAWSUIT:
             houses.append(7)  # Open enemies/legal opponents
             
         # NEW: Education questions with 3rd person logic - CRITICAL FIX
-        elif question_type == "education":
+        elif question_type == Category.EDUCATION:
             if third_person_analysis and third_person_analysis.get("is_third_person"):
                 # Question about someone else's education (e.g., "Will he pass the exam?")
                 student_house = third_person_analysis["subject_house"]  # 7th house for the student
@@ -555,7 +557,7 @@ class TraditionalHoraryQuestionAnalyzer:
                 houses.extend([10, 9])  # Default: L10 success primary, L9 knowledge secondary
                 
         # NEW: Person-specific house assignments
-        elif question_type == "parent":
+        elif question_type == Category.PARENT:
             if any(word in question for word in ["father", "dad"]):
                 houses.append(4)  # 4th house = father
             elif any(word in question for word in ["mother", "mom"]):
@@ -563,25 +565,25 @@ class TraditionalHoraryQuestionAnalyzer:
             else:
                 houses.append(4)  # Default to father
                 
-        elif question_type == "sibling":
+        elif question_type == Category.SIBLING:
             houses.append(3)  # 3rd house = siblings
             
-        elif question_type == "friend_enemy":
+        elif question_type == Category.FRIEND_ENEMY:
             if any(word in question for word in ["friend", "ally"]):
                 houses.append(11)  # 11th house = friends
             else:
                 houses.append(7)   # 7th house = open enemies
                 
         # NEW: Property questions
-        elif question_type == "property":
+        elif question_type == Category.PROPERTY:
             houses.append(4)  # 4th house = real estate, land, property
             
         # NEW: Death and inheritance
-        elif question_type == "death":
+        elif question_type == Category.DEATH:
             houses.append(8)  # 8th house = death, wills, inheritance
             
         # NEW: Spiritual questions
-        elif question_type == "spiritual":
+        elif question_type == Category.SPIRITUAL:
             houses.append(9)  # 9th house = religion, spirituality, higher wisdom
             
         else:
@@ -592,17 +594,17 @@ class TraditionalHoraryQuestionAnalyzer:
                 houses.append(7)  # Default fallback
 
         # Look for specific house keywords (but not for general questions to avoid confusion)
-        if question_type != "general":
+        if question_type != Category.GENERAL:
             for house, keywords in self.house_meanings.items():
                 if house not in houses and any(keyword in question for keyword in keywords):
                     houses.append(house)
 
-        if question_type == "general":
+        if question_type == Category.GENERAL:
             houses = [1, 7]
 
         return houses, None
     
-    def _determine_significators(self, houses: List[int], question_type: str, possession_analysis: Dict = None, third_person_analysis: Dict = None) -> Dict[str, Any]:
+    def _determine_significators(self, houses: List[int], question_type: Category, possession_analysis: Dict = None, third_person_analysis: Dict = None) -> Dict[str, Any]:
         """Determine traditional significators with enhanced multi-house support"""
         
         # CRITICAL FIX: Handle natural significators for transaction questions
@@ -619,7 +621,7 @@ class TraditionalHoraryQuestionAnalyzer:
             }
         else:
             # ENHANCED: Handle 3rd person questions with multiple significators
-            if third_person_analysis and third_person_analysis.get("is_third_person") and question_type == "education":
+            if third_person_analysis and third_person_analysis.get("is_third_person") and question_type == Category.EDUCATION:
                 # Special case for education about someone else (e.g., "Will he pass the exam?")
                 significators = {
                     "querent_house": 1,  # Teacher (querent)
@@ -632,7 +634,7 @@ class TraditionalHoraryQuestionAnalyzer:
                     "transaction_type": False,
                     "third_person_education": True
                 }
-            elif third_person_analysis and third_person_analysis.get("is_third_person") and question_type == "pregnancy":
+            elif third_person_analysis and third_person_analysis.get("is_third_person") and question_type == Category.PREGNANCY:
                 subject_house = houses[1] if len(houses) > 1 else third_person_analysis.get("subject_house", 7)
                 pregnancy_house = houses[2] if len(houses) > 2 else self._apply_house_derivation(subject_house, 5)
                 significators = {
@@ -647,11 +649,11 @@ class TraditionalHoraryQuestionAnalyzer:
                 }
             else:
                 # FIXED: For general questions, use 7th house. For derived house questions, use the actual target.
-                if question_type == "general":
+                if question_type == Category.GENERAL:
                     target_house = 7  # Traditional "other person" for general questions
-                elif question_type == "education":
+                elif question_type == Category.EDUCATION:
                     target_house = 10  # L10 = success/honors for exams
-                elif question_type in ["relationship", "marriage"] and 7 in houses:
+                elif question_type in [Category.RELATIONSHIP, Category.MARRIAGE] and 7 in houses:
                     target_house = 7  # Relationship questions should use 7th house, not 8th
                 else:
                     # For derived house questions (e.g., [1, 7, 8] for husband's possessions)
@@ -666,31 +668,31 @@ class TraditionalHoraryQuestionAnalyzer:
                 }
         
         # Add natural significators based on question type
-        if question_type == "marriage":
+        if question_type == Category.MARRIAGE:
             significators["special_significators"]["venus"] = "natural significator of love"
             significators["special_significators"]["mars"] = "natural significator of men"
-        elif question_type == "gambling":
+        elif question_type == Category.GAMBLING:
             significators["special_significators"]["jupiter"] = "natural significator of fortune and luck"
             significators["special_significators"]["venus"] = "natural significator of pleasure and enjoyment"
-        elif question_type == "funding":
+        elif question_type == Category.FUNDING:
             significators["special_significators"]["jupiter"] = "natural significator of abundance and investors"
             significators["special_significators"]["venus"] = "natural significator of attraction and partnerships"
             significators["special_significators"]["mercury"] = "natural significator of contracts and negotiations"
-        elif question_type == "money":
+        elif question_type == Category.MONEY:
             significators["special_significators"]["jupiter"] = "greater fortune"
             significators["special_significators"]["venus"] = "lesser fortune"
-        elif question_type == "career":
+        elif question_type == Category.CAREER:
             significators["special_significators"]["sun"] = "honor and reputation"
             significators["special_significators"]["jupiter"] = "success"
-        elif question_type == "health":
+        elif question_type == Category.HEALTH:
             significators["special_significators"]["mars"] = "fever and inflammation"
             significators["special_significators"]["saturn"] = "chronic illness"
         # NEW: Education significators
-        elif question_type == "education":
+        elif question_type == Category.EDUCATION:
             significators["special_significators"]["mercury"] = "natural significator of learning and knowledge"
             significators["special_significators"]["jupiter"] = "wisdom and higher learning"
         # NEW: Travel significators
-        elif question_type == "travel":
+        elif question_type == Category.TRAVEL:
             significators["special_significators"]["mercury"] = "short journeys"
             significators["special_significators"]["jupiter"] = "long journeys and foreign travel"
         
