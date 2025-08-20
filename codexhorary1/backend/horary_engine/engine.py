@@ -108,9 +108,9 @@ from models import (
 )
 from question_analyzer import TraditionalHoraryQuestionAnalyzer
 try:
-    from ..taxonomy import Category, resolve_category
+    from ..taxonomy import Category, resolve_category, resolve as resolve_significators
 except ImportError:  # pragma: no cover - fallback when package context is missing
-    from taxonomy import Category, resolve_category
+    from taxonomy import Category, resolve_category, resolve as resolve_significators
 from .reception import TraditionalReceptionCalculator
 from .aspects import (
     calculate_enhanced_aspects,
@@ -2972,111 +2972,18 @@ class EnhancedTraditionalHoraryJudgmentEngine:
     
     # Preserve all existing helper methods for backward compatibility
     def _identify_significators(self, chart: HoraryChart, question_analysis: Dict) -> Dict[str, Any]:
-        """Identify traditional significators with natural significator support"""
-        
-        querent_house = 1
-        querent_ruler = chart.house_rulers.get(querent_house)
-        
-        # CRITICAL FIX: Check for natural significators in transaction questions
+        """Identify significators using shared taxonomy resolver."""
+
+        category = question_analysis.get("question_type")
+        manual_houses = question_analysis.get("relevant_houses")
         significator_info = question_analysis.get("significators", {})
-        if significator_info.get("transaction_type"):
-            # For transaction questions, use natural significators
-            quesited_house = significator_info["quesited_house"]
-            quesited_ruler = chart.house_rulers.get(quesited_house)
-            
-            # Get natural significators (e.g., Sun for car)
-            natural_sigs = significator_info.get("special_significators", {})
-            
-            if not querent_ruler or not quesited_ruler:
-                return {
-                    "valid": False,
-                    "reason": "Cannot determine house rulers"
-                }
-            
-            # Find any item with natural significator
-            item_significator = None
-            item_name = None
-            
-            for item, planet_name in natural_sigs.items():
-                if item != "category" and item != "traditional_source":
-                    try:
-                        # Convert planet name to Planet enum
-                        item_significator = getattr(Planet, planet_name.upper())
-                        item_name = item
-                        break
-                    except AttributeError:
-                        continue
-            
-            if item_significator:
-                return {
-                    "valid": True,
-                    "querent": querent_ruler,
-                    "quesited": quesited_ruler,  # Buyer
-                    "item_significator": item_significator,  # Natural significator for item
-                    "item_name": item_name,
-                    "description": f"Transaction Setup: Seller: {querent_ruler.value} (L1), Buyer: {quesited_ruler.value} (L7), {item_name.title()}: {item_significator.value} (natural significator)",
-                    "transaction_type": True
-                }
-        else:
-            # ENHANCEMENT: Handle 3rd person education questions
-            if significator_info.get("third_person_education"):
-                # Special case: Teacher asking about student's exam success
-                student_house = significator_info.get("student_house", 7)
-                success_house = significator_info.get("success_house", 10)
-                
-                student_ruler = chart.house_rulers.get(student_house)  # Mercury (7th ruler)
-                success_ruler = chart.house_rulers.get(success_house)  # Jupiter (10th ruler)
-                
-                if not querent_ruler or not student_ruler or not success_ruler:
-                    return {
-                        "valid": False,
-                        "reason": "Cannot determine house rulers for 3rd person education question"
-                    }
-                
-                return {
-                    "valid": True,
-                    "querent": querent_ruler,  # Teacher (1st house ruler)
-                    "quesited": success_ruler,  # Success (10th house ruler) - this is what we're judging
-                    "student": student_ruler,   # Student (7th house ruler)
-                    "description": f"Querent: {querent_ruler.value} (ruler of 1), Student: {student_ruler.value} (ruler of 7), Success: {success_ruler.value} (ruler of 10)",
-                    "third_person_education": True,
-                    "student_significator": student_ruler,
-                    "success_significator": success_ruler
-                }
-            
-            # Traditional house-based significators
-            quesited_house = significator_info["quesited_house"]
-            quesited_ruler = chart.house_rulers.get(quesited_house)
-            
-            if not querent_ruler or not quesited_ruler:
-                return {
-                    "valid": False,
-                    "reason": "Cannot determine house rulers"
-                }
-            
-            # Enhanced same-ruler analysis (traditional horary principle)
-            same_ruler_analysis = None
-            if querent_ruler == quesited_ruler:
-                same_ruler_analysis = {
-                    "shared_ruler": querent_ruler,
-                    "interpretation": "Unity of purpose - same planetary energy governs both querent and matter",
-                    "traditional_view": "Favorable for agreement and harmony between parties",
-                    "requires_enhanced_analysis": True
-                }
-            
-            description = f"Querent: {querent_ruler.value} (ruler of {querent_house}), Quesited: {quesited_ruler.value} (ruler of {quesited_house})"
-            
-            if same_ruler_analysis:
-                description = f"Shared Significator: {querent_ruler.value} rules both houses {querent_house} and {quesited_house}"
-            
-            return {
-                "valid": True,
-                "querent": querent_ruler,
-                "quesited": quesited_ruler,
-                "description": description,
-                "same_ruler_analysis": same_ruler_analysis
-            }
-    
+        return resolve_significators(
+            chart,
+            category,
+            manual_houses=manual_houses,
+            significator_info=significator_info,
+        )
+
     def _find_applying_aspect(self, chart: HoraryChart, planet1: Planet, planet2: Planet) -> Optional[Dict]:
         """Find applying aspect between two planets (preserved)"""
         for aspect in chart.aspects:
