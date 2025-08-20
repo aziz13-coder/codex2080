@@ -72,6 +72,10 @@ logging.basicConfig(
 
 
 logger = logging.getLogger(__name__)
+def make_reason(rule: str, stage: str = "error", weight: float = 0) -> dict:
+    """Helper to build structured reasoning entries for error responses."""
+    return {"stage": stage, "rule": rule, "weight": weight}
+
 
 
 
@@ -712,7 +716,7 @@ def calculate_chart():
 
                 'confidence': 0,
 
-                'reasoning': ['No JSON data provided']
+                'reasoning': [make_reason('No JSON data provided')]
 
             }), 400
 
@@ -790,7 +794,7 @@ def calculate_chart():
 
                 'confidence': 0,
 
-                'reasoning': ['No horary question provided']
+                'reasoning': [make_reason('No horary question provided')]
 
             }), 400
 
@@ -806,7 +810,7 @@ def calculate_chart():
 
                 'confidence': 0,
 
-                'reasoning': ['No location provided']
+                'reasoning': [make_reason('No location provided')]
 
             }), 400
 
@@ -826,7 +830,7 @@ def calculate_chart():
 
                     'confidence': 0,
 
-                    'reasoning': ['Date and time must be provided for manual time entry']
+                    'reasoning': [make_reason('Date and time must be provided for manual time entry')]
 
                 }), 400
 
@@ -852,7 +856,7 @@ def calculate_chart():
 
                         'confidence': 0,
 
-                        'reasoning': ['Invalid manual house specification']
+                        'reasoning': [make_reason('Invalid manual house specification')]
 
                     }), 400
 
@@ -866,7 +870,7 @@ def calculate_chart():
 
                     'confidence': 0,
 
-                    'reasoning': ['Invalid manual house format']
+                    'reasoning': [make_reason('Invalid manual house format')]
 
                 }), 400
 
@@ -928,7 +932,7 @@ def calculate_chart():
 
                 'confidence': 0,
 
-                'reasoning': [f'Location error: {str(e)}'],
+                'reasoning': [make_reason(f'Location error: {str(e)}')],
 
                 'error_type': 'LocationError'
 
@@ -1060,7 +1064,7 @@ def calculate_chart():
 
             'confidence': 0,
 
-            'reasoning': [f'Enhanced calculation error: {str(e)}'],
+            'reasoning': [make_reason(f'Enhanced calculation error: {str(e)}')],
 
             'calculation_metadata': {
 
