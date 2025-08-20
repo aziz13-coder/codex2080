@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { buildChartPayload } from './utils/buildChartPayload';
+import { parseReasoningEntry } from './utils/parseReasoning.mjs';
 
 // Text cleanup utility for removing duplicate Moon references and parentheticals
 const cleanMoonText = (text) => {
@@ -301,9 +302,7 @@ const JudgmentBreakdown = ({ reasoning, darkMode }) => {
 
     // Parse plain text reasoning entries
     return reasoning.map(text => {
-      const match = text.match(/\(([-+]\d+)\)/);
-      const weight = match ? parseInt(match[1], 10) : 0;
-      const rule = text.replace(/\(([-+]\d+)\)/, '').trim();
+      const { rule, weight } = parseReasoningEntry(text);
       return { stage: 'General', rule, weight };
     });
   }, [reasoning]);
