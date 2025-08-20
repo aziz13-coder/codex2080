@@ -107,8 +107,5 @@ def test_lottery_chart_low_confidence():
     analyzer = TraditionalHoraryQuestionAnalyzer()
     q_analysis = analyzer.analyze_question("will I win the lottery?")
     engine = EnhancedTraditionalHoraryJudgmentEngine()
-    # ensure translation config accessible via moon namespace
-    if not hasattr(cfg().moon, "translation"):
-        cfg().moon.translation = cfg().translation
     result = engine._apply_enhanced_judgment(chart, q_analysis, window_days=90)
     assert result["confidence"] <= 60
