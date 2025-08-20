@@ -72,9 +72,11 @@ def calculate_moon_next_aspect(
     jd_ut: float,
     get_moon_speed: Callable[[float], float],
 ) -> Optional[LunarAspect]:
-    """Calculate Moon's next applying aspect"""
-    config = cfg()
-    allow_cross_sign = getattr(config.moon, "allow_out_of_sign_applications", True)
+    """Calculate Moon's next applying aspect.
+
+    Cross-sign perfection is disallowed; aspects must perfect before the Moon
+    changes signs.
+    """
 
     moon_pos = planets[Planet.MOON]
     moon_speed = get_moon_speed(jd_ut)
@@ -109,10 +111,9 @@ def calculate_moon_next_aspect(
                         else float("inf")
                     )
 
-                    # Skip aspects that perfect after Moon leaves sign when not allowed
+                    # Skip aspects that perfect after Moon leaves its current sign
                     if (
-                        not allow_cross_sign
-                        and moon_days_to_exit is not None
+                        moon_days_to_exit is not None
                         and time_to_exact > moon_days_to_exit
                     ):
                         continue
