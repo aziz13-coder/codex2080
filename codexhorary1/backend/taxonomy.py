@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import logging
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 
 try:
-    from .models import Planet
+    from .models import Planet, HoraryChart
 except ImportError:  # pragma: no cover - fallback when executed as script
-    from models import Planet
+    from models import Planet, HoraryChart
 
 logger = logging.getLogger(__name__)
 
@@ -145,3 +145,137 @@ def resolve_category(value: Optional[str | Category]) -> Optional[Category]:
 def get_defaults(category: str | Category) -> Dict[str, Any]:
     cat = resolve_category(category)
     return CATEGORY_DEFAULTS.get(cat, {})
+
+
+def resolve(
+    chart: HoraryChart,
+    category: Optional[str | Category],
+    manual_houses: Optional[List[int]] = None,
+    significator_info: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Resolve houses and significators for a question.
+
+    The helper applies precedence of house resolution in the order of
+    ``manual_houses`` → taxonomy defaults → ``[1, 7]`` fallback.  It also
+    encapsulates special cases that previously lived in the engine such as
+    transaction questions and third‑person education queries.
+    """
+
+    significator_info = significator_info or {}
+    cat = resolve_category(category)
+
+    # Determine houses with proper precedence
+    houses = manual_houses
+    if not houses:
+        defaults = CATEGORY_DEFAULTS.get(cat, {})
+        houses = defaults.get("houses")
+    if not houses:
+        houses = [1, 7]
+
+    querent_house = houses[0]
+
+    if manual_houses:
+        quesited_house = manual_houses[1] if len(manual_houses) > 1 else 7
+    elif "quesited_house" in significator_info:
+        quesited_house = significator_info["quesited_house"]
+    else:
+        quesited_house = houses[1] if len(houses) > 1 else 7
+
+    querent_ruler = chart.house_rulers.get(querent_house)
+    quesited_ruler = chart.house_rulers.get(quesited_house)
+
+    # Transaction questions use natural significators
+    if significator_info.get("transaction_type"):
+        natural_sigs = significator_info.get("special_significators", {})
+        if not querent_ruler or not quesited_ruler:
+            return {"valid": False, "reason": "Cannot determine house rulers"}
+
+        item_significator = None
+        item_name = None
+        for item, planet_name in natural_sigs.items():
+            if item not in ("category", "traditional_source"):
+                try:
+                    item_significator = getattr(Planet, planet_name.upper())
+                    item_name = item
+                    break
+                except AttributeError:
+                    continue
+        if item_significator:
+            return {
+                "valid": True,
+                "querent": querent_ruler,
+                "quesited": quesited_ruler,
+                "item_significator": item_significator,
+                "item_name": item_name,
+                "description": (
+                    f"Transaction Setup: Seller: {querent_ruler.value} (L{querent_house}), "
+                    f"Buyer: {quesited_ruler.value} (L{quesited_house}), "
+                    f"{item_name.title()}: {item_significator.value} (natural significator)"
+                ),
+                "transaction_type": True,
+                "houses": houses,
+                "querent_house": querent_house,
+                "quesited_house": quesited_house,
+            }
+
+    # Third‑person education questions
+    if significator_info.get("third_person_education"):
+        student_house = significator_info.get("student_house", 7)
+        success_house = significator_info.get("success_house", 10)
+        student_ruler = chart.house_rulers.get(student_house)
+        success_ruler = chart.house_rulers.get(success_house)
+        if not (querent_ruler and student_ruler and success_ruler):
+            return {
+                "valid": False,
+                "reason": "Cannot determine house rulers for 3rd person education question",
+            }
+        return {
+            "valid": True,
+            "querent": querent_ruler,
+            "quesited": success_ruler,
+            "student": student_ruler,
+            "description": (
+                f"Querent: {querent_ruler.value} (ruler of {querent_house}), "
+                f"Student: {student_ruler.value} (ruler of {student_house}), "
+                f"Success: {success_ruler.value} (ruler of {success_house})"
+            ),
+            "third_person_education": True,
+            "student_significator": student_ruler,
+            "success_significator": success_ruler,
+            "houses": houses,
+            "querent_house": querent_house,
+            "quesited_house": success_house,
+        }
+
+    if not querent_ruler or not quesited_ruler:
+        return {"valid": False, "reason": "Cannot determine house rulers"}
+
+    same_ruler_analysis = None
+    if querent_ruler == quesited_ruler:
+        same_ruler_analysis = {
+            "shared_ruler": querent_ruler,
+            "interpretation": "Unity of purpose - same planetary energy governs both querent and matter",
+            "traditional_view": "Favorable for agreement and harmony between parties",
+            "requires_enhanced_analysis": True,
+        }
+
+    description = (
+        f"Querent: {querent_ruler.value} (ruler of {querent_house}), "
+        f"Quesited: {quesited_ruler.value} (ruler of {quesited_house})"
+    )
+    if same_ruler_analysis:
+        description = (
+            f"Shared Significator: {querent_ruler.value} rules both houses "
+            f"{querent_house} and {quesited_house}"
+        )
+
+    return {
+        "valid": True,
+        "querent": querent_ruler,
+        "quesited": quesited_ruler,
+        "description": description,
+        "same_ruler_analysis": same_ruler_analysis,
+        "houses": houses,
+        "querent_house": querent_house,
+        "quesited_house": quesited_house,
+    }
