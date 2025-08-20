@@ -5,8 +5,15 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.append(str(ROOT))
 sys.path.append(str(ROOT / "backend"))
 
-from backend.horary_engine.aspects import calculate_moon_next_aspect
-from models import Planet, PlanetPosition, Sign
+try:
+    from ..horary_engine.aspects import calculate_moon_next_aspect
+except ImportError:  # pragma: no cover - fallback for direct execution
+    from horary_engine.aspects import calculate_moon_next_aspect
+
+try:
+    from ..models import Planet, PlanetPosition, Sign
+except ImportError:  # pragma: no cover - fallback for direct execution
+    from models import Planet, PlanetPosition, Sign
 
 
 def test_cross_sign_perfection_disallowed():

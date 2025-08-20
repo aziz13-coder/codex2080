@@ -6,9 +6,14 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.append(str(ROOT))
 sys.path.append(str(ROOT / "backend"))
 
-from backend.taxonomy import Category, resolve_category
-from backend.category_router import get_contract
-from backend.models import Planet
+try:
+    from ..taxonomy import Category, resolve_category
+    from ..category_router import get_contract
+    from ..models import Planet
+except ImportError:  # pragma: no cover - fallback for direct execution
+    from taxonomy import Category, resolve_category
+    from category_router import get_contract
+    from models import Planet
 
 
 def test_resolve_category_warns_deprecated(caplog):

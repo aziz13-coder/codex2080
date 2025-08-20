@@ -107,7 +107,10 @@ from models import (
     HoraryChart,
 )
 from question_analyzer import TraditionalHoraryQuestionAnalyzer
-from backend.taxonomy import Category, resolve_category
+try:
+    from ..taxonomy import Category, resolve_category
+except ImportError:  # pragma: no cover - fallback when package context is missing
+    from taxonomy import Category, resolve_category
 from .reception import TraditionalReceptionCalculator
 from .aspects import (
     calculate_enhanced_aspects,

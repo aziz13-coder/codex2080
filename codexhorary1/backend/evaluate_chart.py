@@ -9,11 +9,11 @@ import sys
 # Ensure repository root on path when executed directly
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from backend.category_router import get_contract
-from backend.horary_engine.engine import extract_testimonies
-from backend.horary_engine.aggregator import aggregate
-from backend.horary_engine.rationale import build_rationale
-from backend.horary_engine.utils import token_to_string
+from .category_router import get_contract
+from .horary_engine.engine import extract_testimonies
+from .horary_engine.aggregator import aggregate
+from .horary_engine.rationale import build_rationale
+from .horary_engine.utils import token_to_string
 
 logger = logging.getLogger(__name__)
 
