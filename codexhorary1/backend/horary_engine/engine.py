@@ -2786,14 +2786,13 @@ class EnhancedTraditionalHoraryJudgmentEngine:
         Moon is void if it will not apply to any classical planet by Ptolemaic aspect
         within permitted orb before leaving its current sign.
         """
-        from horary_engine.aspects import is_applying_enhanced
-        
         moon_pos = chart.planets[Planet.MOON]
         config = cfg()
-        
-        # Calculate degrees left in current sign
+
+        # Calculate degrees and days left in current sign
         moon_degree_in_sign = moon_pos.longitude % 30
         degrees_left_in_sign = 30 - moon_degree_in_sign
+        moon_days_to_exit = days_to_sign_exit(moon_pos.longitude, moon_pos.speed)
         
         # Check if Moon is stationary (cannot be void if not moving)
         if abs(moon_pos.speed) < config.timing.stationary_speed_threshold:
@@ -2815,46 +2814,60 @@ class EnhancedTraditionalHoraryJudgmentEngine:
         for planet in classical_planets:
             if planet not in chart.planets:
                 continue
-                
-            planet_pos = chart.planets[planet]
-            
-            for aspect_type in ptolemaic_aspects:
-                # Check if Moon is currently applying to this aspect
-                is_currently_applying = is_applying_enhanced(moon_pos, planet_pos, aspect_type, chart.julian_day)
-                
-                if is_currently_applying:
-                    # Calculate orb and check if within traditional limits
-                    current_separation = abs(moon_pos.longitude - planet_pos.longitude)
-                    if current_separation > 180:
-                        current_separation = 360 - current_separation
-                    
-                    orb_from_exact = abs(current_separation - aspect_type.degrees)
-                    if orb_from_exact > 180:
-                        orb_from_exact = 360 - orb_from_exact
-                    
-                    # Check if within traditional orb
-                    traditional_orb = aspect_type.orb
-                    if orb_from_exact <= traditional_orb:
-                        # Calculate when perfection occurs using analytic solver
-                        days_to_perfection = self._calculate_future_aspect_time(
-                            moon_pos,
-                            planet_pos,
-                            aspect_type,
-                            chart.julian_day,
-                            cfg().timing.max_future_days,
-                        )
-                        if days_to_perfection is not None:
-                            degrees_moon_will_travel = abs(moon_pos.speed) * days_to_perfection
 
-                            # Check if perfection occurs before Moon leaves sign
-                            if degrees_moon_will_travel <= degrees_left_in_sign:
-                                future_applications.append({
-                                    "planet": planet,
-                                    "aspect": aspect_type,
-                                    "orb": orb_from_exact,
-                                    "days_to_perfection": days_to_perfection,
-                                    "perfects_in_sign": True,
-                                })
+            planet_pos = chart.planets[planet]
+            planet_days_to_exit = days_to_sign_exit(planet_pos.longitude, planet_pos.speed)
+
+            for aspect_type in ptolemaic_aspects:
+                # Calculate when perfection occurs using analytic solver
+                days_to_perfection = self._calculate_future_aspect_time(
+                    moon_pos,
+                    planet_pos,
+                    aspect_type,
+                    chart.julian_day,
+                    config.timing.max_future_days,
+                )
+
+                # Reject invalid times
+                if days_to_perfection is None or days_to_perfection <= 0:
+                    continue
+
+                # Ensure perfection occurs before either body leaves its sign
+                if (
+                    moon_days_to_exit is not None
+                    and days_to_perfection >= moon_days_to_exit
+                ):
+                    continue
+                if (
+                    planet_days_to_exit is not None
+                    and days_to_perfection >= planet_days_to_exit
+                ):
+                    continue
+
+                future_moon_lon = (moon_pos.longitude + moon_pos.speed * days_to_perfection) % 360
+                future_planet_lon = (planet_pos.longitude + planet_pos.speed * days_to_perfection) % 360
+                if int(future_moon_lon // 30) != int(moon_pos.longitude // 30):
+                    continue
+                if int(future_planet_lon // 30) != int(planet_pos.longitude // 30):
+                    continue
+
+                current_separation = abs(moon_pos.longitude - planet_pos.longitude)
+                if current_separation > 180:
+                    current_separation = 360 - current_separation
+
+                orb_from_exact = abs(current_separation - aspect_type.degrees)
+                if orb_from_exact > 180:
+                    orb_from_exact = 360 - orb_from_exact
+
+                future_applications.append(
+                    {
+                        "planet": planet,
+                        "aspect": aspect_type,
+                        "orb": orb_from_exact,
+                        "days_to_perfection": days_to_perfection,
+                        "perfects_in_sign": True,
+                    }
+                )
         
         # Moon is void if no future applications found
         is_void = len(future_applications) == 0
@@ -3305,15 +3318,10 @@ class EnhancedTraditionalHoraryJudgmentEngine:
 
         # Solve for time
         t = delta / relative_speed
-        if t <= 0:
-            # Advance by full cycle until positive
-            cycle = 360.0 / abs(relative_speed)
-            t += cycle
+        if t <= 0 or t > max_days:
+            return None
 
-        if t > 0 and t <= max_days:
-            return t
-
-        return None
+        return t
     
     def _check_house_placement_perfection(self, chart: HoraryChart, querent: Planet, quesited: Planet, window_days: int = None) -> Dict[str, Any]:
         """Check for perfection via planets in quesited house aspecting house ruler"""
