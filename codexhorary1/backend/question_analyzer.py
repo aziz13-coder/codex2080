@@ -38,8 +38,8 @@ class TraditionalHoraryQuestionAnalyzer:
             Category.CHILDREN: ["child", "children", "son", "daughter", "offspring", "kids"],
             Category.TRAVEL: ["journey", "travel", "trip", "go to", "visit", "vacation", "move to"],
             Category.GAMBLING: ["lottery", "lotto", "win lottery", "jackpot", "scratch", "raffle", "betting", "bet", "gamble", "gambling", "casino", "poker", "blackjack", "slots", "dice", "win money", "lucky", "speculation"],
-            Category.FUNDING: ["funding", "fund", "investment", "invest", "investor", "funding round", "seed", "series a", "series b", "venture capital", "vc", "angel", "capital", "raise money", "raise capital", "secure funding", "startup funding", "business loan", "finance", "financial backing", "sponsor", "grant", "equity", "valuation"],
-            Category.MONEY: ["money", "wealth", "rich", "profit", "gain", "debt", "financial", "income", "salary", "pay", "trading", "stock"],
+            Category.FUNDING: ["funding", "fund", "investment", "invest", "investor", "funding round", "seed", "series a", "series b", "venture capital", "vc", "angel", "capital", "raise money", "raise capital", "secure funding", "startup funding", "business loan", "loan", "loan application", "finance", "financial backing", "sponsor", "grant", "equity", "valuation"],
+            Category.MONEY: ["money", "wealth", "rich", "profit", "gain", "debt", "financial", "income", "salary", "pay", "trading", "stock", "loan", "loan application"],
             Category.CAREER: ["job", "career", "work", "employment", "business", "promotion", "interview"],
             Category.HEALTH: ["sick", "illness", "disease", "health", "recover", "die", "cure", "healing", "medical"],
             Category.LAWSUIT: ["court", "lawsuit", "legal", "judge", "trial", "litigation", "case"],
@@ -398,7 +398,7 @@ class TraditionalHoraryQuestionAnalyzer:
         """Enhanced question type determination with transaction and possession priority"""
         
         # PRIORITY 1: Financial transactions override relationship keywords
-        transaction_words = ["sell", "buy", "purchase", "sale", "profit", "gain", "lose", "cost", "price", "payment", "trade", "exchange"]
+        transaction_words = ["sell", "buy", "purchase", "sale", "profit", "gain", "lose", "cost", "price", "payment", "trade", "exchange", "loan"]
         if any(word in question for word in transaction_words):
             return Category.MONEY, [word for word in transaction_words if word in question]
         
