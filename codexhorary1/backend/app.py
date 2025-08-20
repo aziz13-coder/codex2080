@@ -54,12 +54,18 @@ from horary_engine.services.geolocation import LocationError
 # Configure logging
 log_level = os.getenv("LOG_LEVEL", "INFO").upper()
 
+# Ensure standard streams can handle Unicode output (e.g., on Windows)
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8")
+
 logging.basicConfig(
     level=getattr(logging, log_level, logging.INFO),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler("horary_api.log"),
-        logging.StreamHandler(),
+        logging.FileHandler("horary_api.log", encoding="utf-8"),
+        logging.StreamHandler(sys.stdout),
     ],
 )
 
