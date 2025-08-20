@@ -13,6 +13,7 @@ import os
 import datetime
 import logging
 from typing import Dict, List, Optional, Any, Tuple
+from types import SimpleNamespace
 
 # Configuration system
 from horary_config import get_config, cfg, HoraryError
@@ -2175,7 +2176,8 @@ class EnhancedTraditionalHoraryJudgmentEngine:
         """Traditional translation of light with comprehensive validation requirements"""
         
         config = cfg()
-        
+        translation_cfg = getattr(config, "translation", SimpleNamespace())
+
         # Check all planets as potential translators (traditionally Moon, but allow all)
         for planet, pos in chart.planets.items():
             if planet in [querent, quesited]:
@@ -2186,7 +2188,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
             quesited_pos = chart.planets[quesited]
             
             # Enhanced speed requirement - translator must be faster than both significators
-            if config.moon.translation.require_speed_advantage:
+            if getattr(translation_cfg, "require_speed_advantage", False):
                 translator_speed = abs(pos.speed)
                 querent_speed = abs(querent_pos.speed)
                 quesited_speed = abs(quesited_pos.speed)
@@ -2244,7 +2246,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
             
             # ENHANCED REQUIREMENT 4: Check for IMMEDIATE SEQUENCE (no intervening aspects)
             sequence_note = ""
-            if config.moon.translation.require_proper_sequence:
+            if getattr(translation_cfg, "require_proper_sequence", False):
                 intervening_aspects = self._check_intervening_aspects(chart, planet, separating_aspect, applying_aspect)
                 if intervening_aspects:
                     continue  # Translation invalid if other aspects intervene
@@ -2323,7 +2325,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                         "orbs_within_limits": True  # We already validated this above
                     },
                     "sequence_validated": True,  # We already validated timing above
-                    "intervening_aspects_checked": config.moon.translation.require_proper_sequence
+                    "intervening_aspects_checked": getattr(translation_cfg, "require_proper_sequence", False)
                 }
             }
         
@@ -4559,8 +4561,9 @@ def get_configuration_info() -> Dict[str, Any]:
                 "default_moon_speed_fallback": config.get('timing.default_moon_speed_fallback'),
                 "max_future_days": config.get('timing.max_future_days')
             },
-            "moon": {
-                "translation_require_speed": config.get('moon.translation.require_speed_advantage', True)
+            "translation": {
+                "require_speed_advantage": config.get('translation.require_speed_advantage', True),
+                "require_proper_sequence": config.get('translation.require_proper_sequence', False)
             },
             "confidence": {
                 "base_confidence": config.get('confidence.base_confidence'),
