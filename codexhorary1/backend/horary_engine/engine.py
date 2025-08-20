@@ -123,6 +123,7 @@ from .serialization import (
     serialize_lunar_aspect,
     serialize_planet_with_solar,
 )
+from .perfection import check_future_prohibitions
 
 
 class EnhancedTraditionalAstrologicalCalculator:
@@ -3247,36 +3248,57 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                 prohibition_check = self._check_future_prohibitions(
                     chart, querent, quesited, days_to_perfection
                 )
-                
-                if not prohibition_check.get("prohibited", False):
-                    # Calculate confidence based on aspect quality and timeframe
-                    base_confidence = config.confidence.perfection.direct_basic
-                    
-                    # Bonus for favorable aspects
-                    if aspect_type in [Aspect.TRINE, Aspect.SEXTILE]:
-                        favorable = True
-                    elif aspect_type == Aspect.CONJUNCTION:
-                        favorable = True  # Generally favorable unless combustion
-                    else:
-                        favorable = False
-                        base_confidence -= 10  # Penalty for hard aspects
-                    
-                    # Timing bonus - sooner is better
-                    if days_to_perfection <= 7:
-                        base_confidence += 5
-                    elif days_to_perfection <= 30:
-                        base_confidence += 2
-                    
+                if prohibition_check.get("prohibited"):
+                    return {
+                        "perfects": False,
+                        "type": prohibition_check.get("type", "prohibition"),
+                        "reason": prohibition_check["reason"],
+                    }
+
+                if prohibition_check.get("type") in ("translation", "collection"):
+                    kind = prohibition_check["type"]
+                    conf_key = (
+                        "translation_of_light" if kind == "translation" else "collection_of_light"
+                    )
                     return {
                         "perfects": True,
-                        "type": "direct_timed",
-                        "favorable": favorable,
-                        "confidence": base_confidence,
-                        "reason": f"Future {aspect_type.display_name} between {querent.value} and {quesited.value} in {days_to_perfection:.1f} days",
-                        "t_perfect_days": days_to_perfection,
+                        "type": kind,
+                        "favorable": True,
+                        "confidence": getattr(config.confidence.perfection, conf_key),
+                        "reason": prohibition_check["reason"],
+                        "t_perfect_days": prohibition_check.get("t_event"),
                         "aspect": aspect_type,
-                        "tags": [{"family": "perfection", "kind": "direct_timed"}],
+                        "tags": [{"family": "perfection", "kind": kind}],
                     }
+
+                # Calculate confidence based on aspect quality and timeframe
+                base_confidence = config.confidence.perfection.direct_basic
+
+                # Bonus for favorable aspects
+                if aspect_type in [Aspect.TRINE, Aspect.SEXTILE]:
+                    favorable = True
+                elif aspect_type == Aspect.CONJUNCTION:
+                    favorable = True  # Generally favorable unless combustion
+                else:
+                    favorable = False
+                    base_confidence -= 10  # Penalty for hard aspects
+
+                # Timing bonus - sooner is better
+                if days_to_perfection <= 7:
+                    base_confidence += 5
+                elif days_to_perfection <= 30:
+                    base_confidence += 2
+
+                return {
+                    "perfects": True,
+                    "type": "direct_timed",
+                    "favorable": favorable,
+                    "confidence": base_confidence,
+                    "reason": f"Future {aspect_type.display_name} between {querent.value} and {quesited.value} in {days_to_perfection:.1f} days",
+                    "t_perfect_days": days_to_perfection,
+                    "aspect": aspect_type,
+                    "tags": [{"family": "perfection", "kind": "direct_timed"}],
+                }
         
         return {"perfects": False, "reason": "No future perfection within timeframe"}
     
@@ -3407,49 +3429,77 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                 prohibition_check = self._check_future_prohibitions(
                     chart, planet, ruler, days_to_perfection
                 )
-                
-                if not prohibition_check.get("prohibited", False):
-                    # Calculate confidence
-                    base_confidence = config.confidence.perfection.direct_basic
-                    
-                    # Boost for strong dignity
-                    if planet_pos.dignity_score > 3:
-                        base_confidence += 10
-                    
-                    # Determine favorability
-                    favorable = aspect_type in [Aspect.TRINE, Aspect.SEXTILE, Aspect.CONJUNCTION]
-                    if not favorable:
-                        base_confidence -= 10
-                    
-                    # Timing bonus
-                    if days_to_perfection <= 7:
-                        base_confidence += 5
-                    elif days_to_perfection <= 30:
-                        base_confidence += 2
-                    
+                if prohibition_check.get("prohibited"):
+                    return {
+                        "perfects": False,
+                        "type": prohibition_check.get("type", "prohibition"),
+                        "reason": prohibition_check["reason"],
+                    }
+
+                if prohibition_check.get("type") in ("translation", "collection"):
+                    kind = prohibition_check["type"]
+                    conf_key = (
+                        "translation_of_light" if kind == "translation" else "collection_of_light"
+                    )
                     return {
                         "perfects": True,
-                        "type": "future_house_placement",
-                        "favorable": favorable,
-                        "confidence": base_confidence,
-                        "reason": f"Future {aspect_type.display_name}: {planet.value} in house {planet_pos.house} to {ruler.value} in {days_to_perfection:.1f} days",
-                        "t_perfect_days": days_to_perfection,
+                        "type": kind,
+                        "favorable": True,
+                        "confidence": getattr(config.confidence.perfection, conf_key),
+                        "reason": prohibition_check["reason"],
+                        "t_perfect_days": prohibition_check.get("t_event"),
                         "planet_in_house": planet,
                         "house_ruler": ruler,
                         "aspect": aspect_type,
-                        "tags": [{"family": "perfection", "kind": "future_house_placement"}]
+                        "tags": [{"family": "perfection", "kind": kind}],
                     }
+
+                # Calculate confidence
+                base_confidence = config.confidence.perfection.direct_basic
+
+                # Boost for strong dignity
+                if planet_pos.dignity_score > 3:
+                    base_confidence += 10
+
+                # Determine favorability
+                favorable = aspect_type in [Aspect.TRINE, Aspect.SEXTILE, Aspect.CONJUNCTION]
+                if not favorable:
+                    base_confidence -= 10
+
+                # Timing bonus
+                if days_to_perfection <= 7:
+                    base_confidence += 5
+                elif days_to_perfection <= 30:
+                    base_confidence += 2
+
+                return {
+                    "perfects": True,
+                    "type": "future_house_placement",
+                    "favorable": favorable,
+                    "confidence": base_confidence,
+                    "reason": f"Future {aspect_type.display_name}: {planet.value} in house {planet_pos.house} to {ruler.value} in {days_to_perfection:.1f} days",
+                    "t_perfect_days": days_to_perfection,
+                    "planet_in_house": planet,
+                    "house_ruler": ruler,
+                    "aspect": aspect_type,
+                    "tags": [{"family": "perfection", "kind": "future_house_placement"}]
+                }
         
         return {"perfects": False}
     
-    def _check_future_prohibitions(self, chart: HoraryChart, querent: Planet, quesited: Planet, 
+    def _check_future_prohibitions(self, chart: HoraryChart, querent: Planet, quesited: Planet,
                                   days_ahead: float) -> Dict[str, Any]:
-        """Check if future perfection will be prohibited by intervening aspects"""
-        
-        # For now, simple implementation - could be enhanced to check actual prohibitions
-        # This is a placeholder for more sophisticated prohibition checking
-        
-        return {"prohibited": False, "reason": "No prohibitions detected"}
+        """Check if future perfection will be modified by intervening aspects.
+
+        This delegates to :func:`check_future_prohibitions` which implements
+        classical Lilly/Sahl rules for prohibition, translation and collection
+        of light. The helper is passed a reference to this engine's
+        ``_calculate_future_aspect_time`` so it can solve timing analytically.
+        """
+
+        return check_future_prohibitions(
+            chart, querent, quesited, days_ahead, self._calculate_future_aspect_time
+        )
     
     def _check_moon_sun_education_perfection(self, chart: HoraryChart, question_analysis: Dict) -> Dict[str, Any]:
         """Check Moon-Sun aspects in education questions (traditional co-significator analysis)"""

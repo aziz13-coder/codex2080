@@ -75,15 +75,19 @@ moon:
 
   # Out-of-sign applications are ignored; cross-sign perfection is disallowed
 
-  # Translation and collection requirements
-  translation:
-    require_speed_advantage: true  # Translator must be faster than significators
-    require_proper_sequence: true   # Must separate then apply
-    require_reception: false        # Reception not mandatory
-  
-  collection:
-    require_collector_dignity: true # Collector should be dignified
-    minimum_dignity_score: 0       # Minimum dignity for valid collection
+perfection:
+  require_in_sign: true
+  allow_out_of_sign: false
+
+# Translation and collection requirements
+translation:
+  require_speed_advantage: true  # Translator must be faster than significators
+  require_proper_sequence: true   # Must separate then apply
+  require_reception: false        # Reception not mandatory
+
+collection:
+  require_collector_dignity: true # Collector should be dignified
+  minimum_dignity_score: 0       # Minimum dignity for valid collection
 
 confidence:
   # Base confidence levels
