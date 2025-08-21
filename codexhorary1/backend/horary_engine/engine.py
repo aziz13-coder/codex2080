@@ -2690,6 +2690,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
 
         benefic_aspects = []
         total_score = 0
+        separating_notes: List[str] = []
 
         for benefic in benefics:
             if benefic in significators or benefic not in chart.planets:
@@ -2705,6 +2706,18 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                 for aspect in chart.aspects:
                     if ((aspect.planet1 == benefic and aspect.planet2 == significator) or
                         (aspect.planet1 == significator and aspect.planet2 == benefic)):
+
+                        if not aspect.applying:
+                            # Record separating aspects as historical notes only
+                            separating_notes.append(
+                                self._format_aspect_for_display(
+                                    benefic.value,
+                                    aspect.aspect.value,
+                                    significator.value,
+                                    aspect.applying,
+                                )
+                            )
+                            continue
 
                         # Calculate benefic strength
                         aspect_strength = self._calculate_benefic_aspect_strength(
@@ -2780,6 +2793,9 @@ class EnhancedTraditionalHoraryJudgmentEngine:
 
             strongest = max(benefic_aspects, key=lambda x: x["strength"])
 
+            reason = strongest.get("description", "")
+            if separating_notes:
+                reason += f"; separating aspects noted: {', '.join(separating_notes)}"
             return {
                 "favorable": result == "YES",
                 "neutral": result == "UNCLEAR",
@@ -2788,9 +2804,12 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                 "total_score": total_score,
                 "aspects": benefic_aspects,
                 "strongest_aspect": strongest,
-                "reason": strongest.get("description", ""),
+                "reason": reason,
             }
         else:
+            reason = "No benefic support to significators"
+            if separating_notes:
+                reason += f" (separating aspects noted: {', '.join(separating_notes)})"
             return {
                 "favorable": False,
                 "neutral": False,
@@ -2798,7 +2817,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                 "confidence": 0,
                 "total_score": 0,
                 "aspects": [],
-                "reason": "No benefic support to significators",
+                "reason": reason,
             }
 
     def _calculate_benefic_aspect_strength(self, benefic: Planet, significator: Planet, aspect: AspectInfo, chart: HoraryChart, relevant_planets: set = None) -> int:
@@ -2828,13 +2847,12 @@ class EnhancedTraditionalHoraryJudgmentEngine:
             base_strength = 0
             
         # Applying vs separating
-        if aspect.applying:
-            if base_strength > 0:
-                base_strength += 2  # Bonus for positive aspects
-            else:
-                base_strength -= 1  # Penalty for negative aspects
+        if not aspect.applying:
+            return 0  # Separating aspects provide no benefic support
+        if base_strength > 0:
+            base_strength += 2  # Bonus for positive aspects
         else:
-            base_strength = max(-6, base_strength - 2)
+            base_strength -= 1  # Penalty for negative aspects
             
         # Reception rescue for hard aspects
         if base_strength < 0:
