@@ -82,6 +82,7 @@ def _structure_reasoning(reasoning: List[Any]) -> List[Dict[str, Any]]:
     """
 
     structured: List[Dict[str, Any]] = []
+    config = None  # lazily loaded configuration for weight lookups
     for entry in reasoning:
         if isinstance(entry, dict):
             structured.append(
@@ -111,6 +112,29 @@ def _structure_reasoning(reasoning: List[Any]) -> List[Dict[str, Any]]:
             except (TypeError, ValueError):
                 weight = 0
             rule = rule[: weight_match.start()].rstrip()
+        else:
+            # Derive implicit weights from known rule packs when possible
+            if stage == "Radicality" and (
+                "Ascendant too early" in rule or "Ascendant too late" in rule
+            ):
+                # Load configuration lazily to avoid startup cost when unused
+                if config is None:
+                    try:
+                        config = cfg()
+                    except Exception:
+                        config = SimpleNamespace()
+                penalty = getattr(
+                    getattr(config, "radicality", SimpleNamespace()),
+                    "asc_warning_penalty",
+                    0,
+                )
+                try:
+                    penalty_int = int(penalty)
+                except (TypeError, ValueError):
+                    penalty_int = 0
+                if penalty_int:
+                    weight = -penalty_int
+                    rule = f"{rule} ({weight})"
 
         structured.append({"stage": stage, "rule": rule, "weight": weight})
 
