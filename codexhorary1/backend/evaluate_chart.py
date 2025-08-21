@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
+import os
 from pathlib import Path
 import sys
 
@@ -19,7 +20,9 @@ from .horary_engine.utils import token_to_string
 logger = logging.getLogger(__name__)
 
 
-def evaluate_chart(chart: Dict[str, Any]) -> Dict[str, Any]:
+def evaluate_chart(
+    chart: Dict[str, Any], use_dsl: Optional[bool] = None
+) -> Dict[str, Any]:
     """Evaluate a horary chart and return verdict with diagnostics.
 
     The function performs the following steps:
@@ -28,11 +31,24 @@ def evaluate_chart(chart: Dict[str, Any]) -> Dict[str, Any]:
     2. Extract normalized testimony tokens from the chart.
     3. Aggregate testimonies into a numeric score and contribution ledger.
     4. Build a human readable rationale from the ledger.
+
+    Args:
+        chart: Parsed chart information.
+        use_dsl: Optional override for the aggregation engine. If ``None`` the
+            value is sourced from the ``HORARY_USE_DSL`` environment variable or
+            ``aggregator.use_dsl`` setting. This makes it easy for API callers to
+            supply a query or header flag without editing config files.
     """
     contract = get_contract(chart.get("category", ""))
     testimonies = extract_testimonies(chart, contract)
 
-    use_dsl = cfg().get("aggregator.use_dsl", False)
+    if use_dsl is None:
+        env_override = os.getenv("HORARY_USE_DSL")
+        if env_override is not None:
+            use_dsl = env_override.lower() in {"1", "true", "yes"}
+        else:
+            use_dsl = cfg().get("aggregator.use_dsl", False)
+
     if use_dsl:
         from .horary_engine.solar_aggregator import aggregate as aggregator_fn
     else:
