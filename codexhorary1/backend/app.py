@@ -48,7 +48,7 @@ from collections import defaultdict
 
 from horary_engine.engine import HoraryEngine, serialize_planet_with_solar
 from horary_engine.services.geolocation import LocationError
-from evaluate_chart import evaluate_chart
+from .evaluate_chart import evaluate_chart
 from horary_engine.utils import token_to_string
 
 
