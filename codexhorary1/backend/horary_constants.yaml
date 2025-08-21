@@ -2,7 +2,10 @@
 # All timing, orbs, and confidence values for traditional horary judgment
 
 aggregator:
-  use_dsl: false
+  # Defaults to the new DSL-based aggregator. Set the HORARY_USE_DSL
+  # environment variable to "false" to fall back to the legacy aggregation
+  # logic without editing this file.
+  use_dsl: true
 
 timing:
   # Timing calculation parameters
