@@ -1242,15 +1242,35 @@ class EnhancedTraditionalHoraryJudgmentEngine:
         if not ignore_void_moon:
             void_check = self._is_moon_void_of_course_enhanced(chart)
             if void_check["void"]:
-                if void_check.get("exception"):
-                    reasoning.append(f"Void Moon noted but excepted: {void_check['reason']}")
-                else:
-                    override_check = TraditionalOverrides.check_void_moon_overrides(chart, question_analysis, self)
-                    if override_check.get("can_override"):
-                        reasoning.append(f"Void Moon noted but overridden: {override_check['reason']}")
-                    else:
-                        reasoning.append(f"Void Moon: {void_check['reason']}")
                 void_penalty = getattr(config.moon, "void_penalty", 10)
+                if void_check.get("exception"):
+                    reasoning.append(
+                        {
+                            "stage": "Moon",
+                            "rule": f"Void Moon noted but excepted: {void_check['reason']}",
+                            "weight": -void_penalty,
+                        }
+                    )
+                else:
+                    override_check = TraditionalOverrides.check_void_moon_overrides(
+                        chart, question_analysis, self
+                    )
+                    if override_check.get("can_override"):
+                        reasoning.append(
+                            {
+                                "stage": "Moon",
+                                "rule": f"Void Moon noted but overridden: {override_check['reason']}",
+                                "weight": -void_penalty,
+                            }
+                        )
+                    else:
+                        reasoning.append(
+                            {
+                                "stage": "Moon",
+                                "rule": void_check["reason"],
+                                "weight": -void_penalty,
+                            }
+                        )
                 if getattr(config.moon, "void_gating", False):
                     return {
                         "result": "NO",
