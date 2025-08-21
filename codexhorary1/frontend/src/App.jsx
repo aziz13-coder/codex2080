@@ -1883,7 +1883,9 @@ const EnhancedChartView = ({ chart, darkMode, notes, setNotes }) => {
     const a = document.createElement('a');
     a.href = url;
     a.download = `enhanced-horary-chart-${chart.id}.json`;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
