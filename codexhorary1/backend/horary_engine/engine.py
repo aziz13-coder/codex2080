@@ -13,6 +13,7 @@ import os
 import datetime
 import logging
 import re
+import math
 from typing import Dict, List, Optional, Any, Tuple
 from types import SimpleNamespace
 
@@ -3521,9 +3522,24 @@ class EnhancedTraditionalHoraryJudgmentEngine:
         
         config = cfg()
         max_window = min(window_days, getattr(config.timing, "max_window_days", 365))
-        
+
         querent_pos = chart.planets[querent]
         quesited_pos = chart.planets[quesited]
+
+        # Moiety-based orb limit
+        moiety_q = getattr(config.orbs.moieties, querent.value, self._get_planet_moiety(querent))
+        moiety_qs = getattr(config.orbs.moieties, quesited.value, self._get_planet_moiety(quesited))
+        orb_limit = moiety_q + moiety_qs
+
+        target_angles = {
+            Aspect.CONJUNCTION: 0,
+            Aspect.SEXTILE: 60,
+            Aspect.SQUARE: 90,
+            Aspect.TRINE: 120,
+            Aspect.OPPOSITION: 180,
+        }
+
+        alignment_info = None
         
         # First check if there's an existing aspect between significators
         existing_aspect = None
@@ -3538,16 +3554,52 @@ class EnhancedTraditionalHoraryJudgmentEngine:
         
         for aspect_type in aspect_types:
             # If there's an existing aspect of this type that's separating, skip it
-            if (existing_aspect and 
-                existing_aspect.aspect == aspect_type and 
-                not existing_aspect.applying):
+            if (
+                existing_aspect
+                and existing_aspect.aspect == aspect_type
+                and not existing_aspect.applying
+            ):
                 continue  # Can't have future perfection of same aspect type that's already separating
-            
+
+            target_angle = target_angles[aspect_type]
+            delta = (quesited_pos.longitude + target_angle - querent_pos.longitude) % 360.0
+            if delta > 180:
+                delta -= 360.0
+            separation = abs(delta)
+            derivative = quesited_pos.speed - querent_pos.speed
+            applying = derivative * math.copysign(1, delta) < 0
+            if separation > orb_limit or not applying:
+                continue
+
             days_to_perfection = self._calculate_future_aspect_time(
                 querent_pos, quesited_pos, aspect_type, chart.julian_day, max_window
             )
-            
+
             if days_to_perfection is not None and 0 < days_to_perfection <= max_window:
+                # Sign boundary check
+                if getattr(config.perfection, "require_in_sign", False):
+                    exit_q = days_to_sign_exit(querent_pos.longitude, querent_pos.speed)
+                    exit_qs = days_to_sign_exit(quesited_pos.longitude, quesited_pos.speed)
+                    exits = [e for e in (exit_q, exit_qs) if e is not None]
+                    if exits and days_to_perfection > min(exits):
+                        return {
+                            "perfects": False,
+                            "type": "out_of_sign",
+                            "reason": "Perfection occurs after sign exit",
+                        }
+
+                max_horary_days = getattr(config.timing, "max_horary_days", 30)
+                if days_to_perfection > max_horary_days:
+                    alignment_info = {
+                        "perfects": False,
+                        "type": "astronomical_alignment",
+                        "reason": f"Future {aspect_type.display_name} between {querent.value} and {quesited.value} in {days_to_perfection:.1f} days (astronomical alignment)",
+                        "t_perfect_days": days_to_perfection,
+                        "aspect": aspect_type,
+                        "tags": [{"family": "perfection", "kind": "astronomical_alignment"}],
+                    }
+                    continue
+
                 # Check for prohibitions/refranations before perfection
                 prohibition_check = self._check_future_prohibitions(
                     chart, querent, quesited, days_to_perfection
@@ -3603,7 +3655,10 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                     "aspect": aspect_type,
                     "tags": [{"family": "perfection", "kind": "direct_timed"}],
                 }
-        
+
+        if alignment_info:
+            return alignment_info
+
         return {"perfects": False, "reason": "No future perfection within timeframe"}
     
     def _calculate_future_aspect_time(
