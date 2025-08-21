@@ -1,6 +1,9 @@
 # Horary Astrology Engine Configuration
 # All timing, orbs, and confidence values for traditional horary judgment
 
+aggregator:
+  use_dsl: false
+
 timing:
   # Timing calculation parameters
   default_moon_speed_fallback: 13.0  # degrees per day (only if ephemeris fails)

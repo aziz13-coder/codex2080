@@ -9,9 +9,10 @@ import sys
 # Ensure repository root on path when executed directly
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
+from horary_config import cfg
+
 from .category_router import get_contract
 from .horary_engine.engine import extract_testimonies
-from .horary_engine.aggregator import aggregate
 from .horary_engine.rationale import build_rationale
 from .horary_engine.utils import token_to_string
 
@@ -30,7 +31,14 @@ def evaluate_chart(chart: Dict[str, Any]) -> Dict[str, Any]:
     """
     contract = get_contract(chart.get("category", ""))
     testimonies = extract_testimonies(chart, contract)
-    score, ledger = aggregate(testimonies)
+
+    use_dsl = cfg().get("aggregator.use_dsl", False)
+    if use_dsl:
+        from .horary_engine.solar_aggregator import aggregate as aggregator_fn
+    else:
+        from .horary_engine.aggregator import aggregate as aggregator_fn
+
+    score, ledger = aggregator_fn(testimonies)
     # Surface ledger details for downstream inspection and debugging
     logger.info(
         "Contribution ledger: %s",
