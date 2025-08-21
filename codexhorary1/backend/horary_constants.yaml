@@ -12,6 +12,7 @@ timing:
   default_moon_speed_fallback: 13.0  # degrees per day (only if ephemeris fails)
   timing_precision_days: 0.1  # minimum timing increment
   max_future_days: 365  # maximum days to look ahead for aspects/stations
+  max_horary_days: 30   # maximum days considered valid for horary perfection
   
   # Timeframe support
   default_window_days: 365   # Default window when no timeframe specified
