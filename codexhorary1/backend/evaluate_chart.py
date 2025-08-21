@@ -50,7 +50,24 @@ def evaluate_chart(
             use_dsl = cfg().get("aggregator.use_dsl", False)
 
     if use_dsl:
+        from .horary_engine.dsl import (
+            L1,
+            L10,
+            L3,
+            LQ,
+            Moon,
+            role_importance,
+        )
         from .horary_engine.solar_aggregator import aggregate as aggregator_fn
+
+        testimonies = [
+            role_importance(L1, 1.0),
+            role_importance(LQ, 1.0),
+            role_importance(Moon, 0.7),
+            role_importance(L10, 1.0),
+            role_importance(L3, 1.0),
+            *testimonies,
+        ]
     else:
         from .horary_engine.aggregator import aggregate as aggregator_fn
 
