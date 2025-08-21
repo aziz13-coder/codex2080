@@ -288,6 +288,21 @@ const JudgmentBreakdown = ({ reasoning, darkMode }) => {
       return word;
     });
   };
+  const renderReasoningText = (text) => {
+    if (typeof text === 'string' && text.startsWith('FLAG: MOON_NEXT_DECISIVE')) {
+      return (
+        <a
+          href="https://example.com/help/moon-next-aspect"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-indigo-600 dark:text-indigo-400 underline"
+        >
+          Moon’s next aspect is decisive for the outcome
+        </a>
+      );
+    }
+    return renderTextWithPlanetSymbols(cleanMoonText(text));
+  };
   // Transform reasoning if it's still in string format
   const structuredReasoning = useMemo(() => {
     if (!reasoning || reasoning.length === 0) return [];
@@ -398,16 +413,16 @@ const JudgmentBreakdown = ({ reasoning, darkMode }) => {
                         {item.weight > 0 ? '+' : ''}{item.weight !== 0 ? item.weight : '⚠'}
                       </span>
                     </div>
-                    <span className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed flex-1">
-                      {renderTextWithPlanetSymbols(cleanMoonText(item.rule))}
-                    </span>
-                    {item.tooltip && (
-                      <div className="relative group">
-                        <HelpCircle className="w-4 h-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-help flex-shrink-0 mt-0.5" />
-                        <div className="absolute left-0 top-6 w-64 p-2 bg-gray-800 text-white text-xs rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                          {item.tooltip}
+                      <span className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed flex-1">
+                        {renderReasoningText(item.rule)}
+                      </span>
+                      {item.tooltip && (
+                        <div className="relative group">
+                          <HelpCircle className="w-4 h-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-help flex-shrink-0 mt-0.5" />
+                          <div className="absolute left-0 top-6 w-64 p-2 bg-gray-800 text-white text-xs rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                            {item.tooltip}
+                          </div>
                         </div>
-                      </div>
                     )}
                   </div>
                 </div>
