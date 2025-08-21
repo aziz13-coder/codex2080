@@ -5,7 +5,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.append(str(ROOT))
 sys.path.append(str(ROOT / "backend"))
 
-from horary_engine.dsl import role_importance, Moon
+from horary_engine.dsl import role_importance, Moon, L1, L10
 from horary_engine.polarity_weights import TestimonyKey
 from horary_engine.solar_aggregator import aggregate as solar_aggregate
 from horary_engine.aggregator import aggregate as legacy_aggregate
@@ -36,3 +36,14 @@ def test_solar_scales_relative_to_legacy():
         TestimonyKey.MOON_APPLYING_TRINE_EXAMINER_SUN,
     ])
     assert score_solar == score_legacy * 0.5
+
+
+def test_role_matching_uses_delimiters():
+    testimonies = [
+        role_importance(L1, 0.5),
+        role_importance(L10, 2.0),
+        TestimonyKey.L10_FORTUNATE,
+    ]
+    score, ledger = solar_aggregate(testimonies)
+    assert score == 2.0
+    assert ledger[0]["weight"] == 2.0

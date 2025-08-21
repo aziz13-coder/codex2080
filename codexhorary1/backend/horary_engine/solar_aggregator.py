@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import Iterable, List, Tuple, Dict, Sequence
+import re
 
 from .polarity_weights import (
     POLARITY_TABLE,
@@ -64,7 +65,8 @@ def aggregate(
         role_factor = 1.0
         token_name = token.value.lower()
         for role_name, factor in role_weights.items():
-            if role_name in token_name:
+            pattern = rf"(^|_){re.escape(role_name)}_"
+            if re.search(pattern, token_name):
                 role_factor *= factor
         weight *= role_factor
 
