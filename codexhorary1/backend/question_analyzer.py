@@ -45,7 +45,9 @@ class TraditionalHoraryQuestionAnalyzer:
             Category.LAWSUIT: ["court", "lawsuit", "legal", "judge", "trial", "litigation", "case"],
             Category.RELATIONSHIP: ["love", "relationship", "friend", "enemy", "romance", "dating", "go out", "go out with", "date", "ask out", "see each other", "like me", "interested in", "attracted to", "reconciliation", "reconcile", "get back together", "ex", "former", "past relationship", "breakup", "break up", "makeup", "make up", "together", "couple", "partner", "boyfriend", "girlfriend", "romantic", "crush", "feelings", "attraction"],
             # NEW: Education and learning patterns
-            Category.EDUCATION: ["exam", "test", "study", "student", "school", "college", "university", "learn", "pass", "graduate", "degree", "education", "academic", "course", "class", "conference", "paper", "publication", "publish", "journal", "research", "submit", "accepted", "peer review", "review", "presentation", "symposium", "seminar", "physiotherapy", "nursing", "medical", "certification"],
+            Category.EDUCATION: [
+                "exam", "test", "study", "student", "school", "college", "university", "learn", "pass", "graduate", "degree", "education", "academic", "course", "class", "conference", "paper", "publication", "publish", "journal", "research", "submit", "accepted", "peer review", "review", "presentation", "symposium", "seminar", "physiotherapy", "nursing", "medical", "certification", "admission", "admit", "admitted", "enroll", "enrolled", "enrollment", "program", "master", "masters"
+            ],
             # NEW: Specific person relationship patterns
             Category.PARENT: ["father", "mother", "dad", "mom", "parent", "stepfather", "stepmother"],
             Category.SIBLING: ["brother", "sister", "sibling"],
