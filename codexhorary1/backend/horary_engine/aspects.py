@@ -46,7 +46,12 @@ def calculate_moon_last_aspect(
                     moon_pos, planet_pos, aspect_type, moon_speed
                 ):
                     degrees_since_exact = orb_diff
-                    time_since_exact = degrees_since_exact / moon_speed
+                    relative_speed = moon_speed - planet_pos.speed
+                    time_since_exact = (
+                        degrees_since_exact / abs(relative_speed)
+                        if relative_speed != 0
+                        else float("inf")
+                    )
 
                     separating_aspects.append(
                         LunarAspect(
