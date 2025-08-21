@@ -2226,7 +2226,9 @@ class EnhancedTraditionalHoraryJudgmentEngine:
             if l2_pos.dignity_score <= threshold:
                 penalty = getattr(penalties, "l2", 0)
                 confidence = max(confidence - penalty, 0)
-                reasoning.append(f"Debilitated L2 ruler ({l2.value}): -{penalty}%")
+                reasoning.append(
+                    f"Debilitated L2 ruler ({l2.value}) (-{penalty}%)"
+                )
 
         l11 = chart.house_rulers.get(11)
         if l11:
@@ -2234,7 +2236,9 @@ class EnhancedTraditionalHoraryJudgmentEngine:
             if l11_pos.dignity_score <= threshold:
                 penalty = getattr(penalties, "l11", 0)
                 confidence = max(confidence - penalty, 0)
-                reasoning.append(f"Debilitated L11 ruler ({l11.value}): -{penalty}%")
+                reasoning.append(
+                    f"Debilitated L11 ruler ({l11.value}) (-{penalty}%)"
+                )
 
         cadent_penalty = getattr(penalties, "cadent_significator", 0)
         for planet in [querent, quesited]:
@@ -2246,7 +2250,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                 if angularity == "cadent":
                     confidence = max(confidence - cadent_penalty, 0)
                     reasoning.append(
-                        f"Cadent {planet.value}: -{cadent_penalty}%"
+                        f"{planet.value} in cadent house (-{cadent_penalty}%)"
                     )
 
         return confidence
