@@ -1353,7 +1353,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                 confidence += config.confidence.solar.cazimi_bonus
                 reasoning.append("Cazimi planets significantly strengthen the judgment")
             elif (solar_factors["combustion_count"] > 0 or solar_factors["under_beams_count"] > 0) and not ignore_combustion:
-                penalty_reasons = []
+                penalty_reasons = []  # list of (reason, penalty)
                 solar_penalty = 0
                 severe_impediments = 0
 
@@ -1371,25 +1371,30 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                             severe_impediments += 1
                             solar_penalty += 40
                             reason = f"{planet.value} (extreme combustion at {distance:.1f}°)"
+                            penalty = 40
                         elif distance < 2.0:
                             solar_penalty += 25
                             reason = f"{planet.value} (severe combustion at {distance:.1f}°)"
+                            penalty = 25
                         elif distance < 5.0:
                             solar_penalty += 15
                             reason = f"{planet.value} (combustion at {distance:.1f}°)"
+                            penalty = 15
                         else:
                             solar_penalty += 10
                             reason = f"{planet.value} (light combustion at {distance:.1f}°)"
+                            penalty = 10
 
                         if planet_dignity <= -4 and distance < 3.0:
                             severe_impediments += 1
                             reason += f" (also severely debilitated: {planet_dignity:+d})"
 
-                        penalty_reasons.append(reason)
+                        penalty_reasons.append((reason, penalty))
 
                     elif condition == "Under the Beams":
-                        solar_penalty += config.confidence.solar.under_beams_penalty
-                        penalty_reasons.append(f"{planet.value} under beams")
+                        ub_penalty = config.confidence.solar.under_beams_penalty
+                        solar_penalty += ub_penalty
+                        penalty_reasons.append((f"{planet.value} under beams", ub_penalty))
 
                 if r17b_enabled and severe_impediments >= 2:
                     return {
@@ -1405,8 +1410,22 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                     }
 
                 if penalty_reasons:
-                    confidence -= min(solar_penalty, 50)
-                    reasoning.append(f"Solar impediment: {', '.join(penalty_reasons)}")
+                    applied_penalty = min(solar_penalty, 50)
+                    confidence -= applied_penalty
+
+                    applied = 0
+                    weighted_reasons = []
+                    for reason, penalty in penalty_reasons:
+                        if applied >= applied_penalty:
+                            weight = 0
+                        else:
+                            weight = min(penalty, applied_penalty - applied)
+                            applied += weight
+                        weighted_reasons.append(f"{reason} (-{weight})")
+
+                    reasoning.append(
+                        f"Solar impediment: {', '.join(weighted_reasons)}"
+                    )
                 else:
                     reasoning.append(f"Solar conditions: {solar_factors['summary']} (significators unaffected)")
         
@@ -1561,15 +1580,19 @@ class EnhancedTraditionalHoraryJudgmentEngine:
 
             # Incorporate Moon's next aspect testimony before other penalties
             if moon_next_aspect_result.get("result"):
+                new_conf = min(
+                    confidence, moon_next_aspect_result.get("confidence", confidence)
+                )
+                weight = int(new_conf - confidence)
                 if moon_next_aspect_result.get("result") == "NO":
                     reasoning.append(
-                        f"Moon's next aspect denies perfection: {moon_next_aspect_result['reason']}"
+                        f"Moon's next aspect denies perfection: {moon_next_aspect_result['reason']} ({weight})"
                     )
                 else:
                     reasoning.append(
-                        f"Moon's next aspect supports but cannot perfect: {moon_next_aspect_result['reason']}"
+                        f"Moon's next aspect supports but cannot perfect: {moon_next_aspect_result['reason']} ({weight})"
                     )
-                confidence = min(confidence, moon_next_aspect_result.get("confidence", confidence))
+                confidence = new_conf
 
             if moon_next_aspect_result.get("decisive"):
                 reasoning.append("FLAG: MOON_NEXT_DECISIVE")
@@ -1809,17 +1832,19 @@ class EnhancedTraditionalHoraryJudgmentEngine:
         
         # 3.6. PRIORITY: Moon's next applying aspect to significators (traditional key indicator)
         if moon_next_aspect_result.get("result"):
+            new_conf = min(
+                confidence, moon_next_aspect_result.get("confidence", confidence)
+            )
+            weight = int(new_conf - confidence)
             if moon_next_aspect_result.get("result") == "NO":
                 reasoning.append(
-                    f"Moon's next aspect denies perfection: {moon_next_aspect_result['reason']}"
+                    f"Moon's next aspect denies perfection: {moon_next_aspect_result['reason']} ({weight})"
                 )
             else:
                 reasoning.append(
-                    f"Moon's next aspect supports but cannot perfect: {moon_next_aspect_result['reason']}"
+                    f"Moon's next aspect supports but cannot perfect: {moon_next_aspect_result['reason']} ({weight})"
                 )
-            confidence = min(
-                confidence, moon_next_aspect_result.get("confidence", confidence)
-            )
+            confidence = new_conf
 
         if moon_next_aspect_result.get("decisive"):
             reasoning.append("FLAG: MOON_NEXT_DECISIVE")
