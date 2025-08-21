@@ -139,34 +139,36 @@ def calculate_moon_next_aspect(
     return None
 
 
+def _moon_orb_motion(
+    moon_pos: PlanetPosition,
+    planet_pos: PlanetPosition,
+    aspect: Aspect,
+    moon_speed: float,
+) -> float:
+    """Return the signed rate of change of the orb between the Moon and a planet.
+
+    Positive values mean the orb is widening (separating), negative values mean
+    the orb is narrowing (applying).
+    """
+
+    # Signed difference from exact aspect in range [-180, 180)
+    diff = (moon_pos.longitude - planet_pos.longitude - aspect.degrees + 180) % 360 - 180
+
+    # Relative speed between the Moon and the other planet
+    relative_speed = moon_speed - planet_pos.speed
+
+    return diff * relative_speed
+
+
 def is_moon_separating_from_aspect(
     moon_pos: PlanetPosition,
     planet_pos: PlanetPosition,
     aspect: Aspect,
     moon_speed: float,
 ) -> bool:
-    """Check if Moon is separating from an aspect"""
+    """Check if the Moon is separating from an aspect using analytic motion."""
 
-    # Calculate separation change over time
-    time_increment = 0.1  # days
-    current_separation = abs(moon_pos.longitude - planet_pos.longitude)
-    if current_separation > 180:
-        current_separation = 360 - current_separation
-
-    # Future positions considering both bodies' motion
-    future_moon_lon = (moon_pos.longitude + moon_speed * time_increment) % 360
-    future_planet_lon = (
-        planet_pos.longitude + planet_pos.speed * time_increment
-    ) % 360
-    future_separation = abs(future_moon_lon - future_planet_lon)
-    if future_separation > 180:
-        future_separation = 360 - future_separation
-
-    # Separating if orb from aspect degree is increasing
-    current_orb = abs(current_separation - aspect.degrees)
-    future_orb = abs(future_separation - aspect.degrees)
-
-    return future_orb > current_orb
+    return _moon_orb_motion(moon_pos, planet_pos, aspect, moon_speed) > 0
 
 
 def is_moon_applying_to_aspect(
@@ -175,28 +177,9 @@ def is_moon_applying_to_aspect(
     aspect: Aspect,
     moon_speed: float,
 ) -> bool:
-    """Check if Moon is applying to an aspect"""
+    """Check if the Moon is applying to an aspect using analytic motion."""
 
-    # Calculate separation change over time
-    time_increment = 0.1  # days
-    current_separation = abs(moon_pos.longitude - planet_pos.longitude)
-    if current_separation > 180:
-        current_separation = 360 - current_separation
-
-    # Future positions considering both bodies' motion
-    future_moon_lon = (moon_pos.longitude + moon_speed * time_increment) % 360
-    future_planet_lon = (
-        planet_pos.longitude + planet_pos.speed * time_increment
-    ) % 360
-    future_separation = abs(future_moon_lon - future_planet_lon)
-    if future_separation > 180:
-        future_separation = 360 - future_separation
-
-    # Applying if orb from aspect degree is decreasing
-    current_orb = abs(current_separation - aspect.degrees)
-    future_orb = abs(future_separation - aspect.degrees)
-
-    return future_orb < current_orb
+    return _moon_orb_motion(moon_pos, planet_pos, aspect, moon_speed) < 0
 
 
 def format_timing_description(days: float) -> str:
