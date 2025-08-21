@@ -1596,7 +1596,10 @@ class EnhancedTraditionalHoraryJudgmentEngine:
             elif perfection["favorable"]:
                 reasoning.append(f"Perfection found: {perfection['reason']}")
             else:
-                reasoning.append(f"❌ Negative perfection: {perfection['reason']}")
+                neg_detail = ""
+                if perfection.get("negative_reasons"):
+                    neg_detail = f" ({'; '.join(perfection['negative_reasons'])})"
+                reasoning.append(f"❌ Negative perfection: {perfection['reason']}{neg_detail}")
 
             # Apply consideration penalties (R1, R26) after perfection
             confidence = max(confidence - asc_penalty - void_penalty, 0)
@@ -2348,12 +2351,16 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                 combustion_penalty = 15
                 confidence -= combustion_penalty
                 
-            # Assess favorability based on aspect quality
+            # Assess favorability based on aspect quality and translator condition
             favorable = True
+            negative_reasons = []
             hard = {Aspect.SQUARE, Aspect.OPPOSITION}
             if (querent_aspect.aspect in hard) or (quesited_aspect.aspect in hard):
                 favorable = False  # Hard aspects make translation strained
                 confidence -= 5
+                negative_reasons.append("hard aspect")
+            if combustion_penalty:
+                negative_reasons.append("translator combust")
             
             # Calculate validation metrics for transparency
             translator_speed = abs(pos.speed)
@@ -2377,6 +2384,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                     "quesited_reception": reception_quesited_data
                 },
                 "combustion_penalty": combustion_penalty,
+                "negative_reasons": negative_reasons,
                 "validation_details": {
                     "speed_validated": translator_speed > max(querent_speed, quesited_speed),
                     "translator_speed": translator_speed,
@@ -3347,6 +3355,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                     "confidence": config.confidence.perfection.translation_of_light,
                     "reason": f"Translation of light by {translation['translator'].value} - {translation['sequence']}",
                     "translator": translation["translator"],
+                    "negative_reasons": translation.get("negative_reasons"),
                     "tags": [{"family": "perfection", "kind": "tol"}],
                 }
         
@@ -3361,6 +3370,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                     "confidence": config.confidence.perfection.collection_of_light,
                     "reason": f"Collection of light by {collection['collector'].value}",
                     "collector": collection["collector"],
+                    "negative_reasons": collection.get("negative_reasons"),
                     "tags": [{"family": "perfection", "kind": "col"}],
                 }
         
@@ -3781,7 +3791,8 @@ class EnhancedTraditionalHoraryJudgmentEngine:
             # Assess collector's condition and dignity
             collector_strength = pos.dignity_score
             base_confidence = 60
-            
+            negative_reasons = []
+
             # Strong collector increases confidence
             if collector_strength >= 3:
                 base_confidence += 15
@@ -3789,17 +3800,20 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                 base_confidence += 5
             else:
                 base_confidence -= 10  # Weak collector reduces confidence
-            
+                negative_reasons.append("weak collector")
+
             # Check if collector is free from major afflictions
             if hasattr(pos, 'solar_condition') and pos.solar_condition.condition == "Combustion":
                 base_confidence -= 20  # Combust collector less reliable
-            
+                negative_reasons.append("collector combust")
+
             # Assess aspect quality
             favorable = True
-            if (aspects_from_querent["aspect"].aspect in ["Square", "Opposition"] or 
+            if (aspects_from_querent["aspect"].aspect in ["Square", "Opposition"] or
                 aspects_from_quesited["aspect"].aspect in ["Square", "Opposition"]):
                 favorable = False
                 base_confidence -= 10
+                negative_reasons.append("hard aspect")
             
             return {
                 "found": True,
@@ -3808,7 +3822,8 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                 "confidence": min(90, max(30, base_confidence)),
                 "strength": collector_strength,
                 "timing_valid": True,
-                "reception": "both_receive_collector"
+                "reception": "both_receive_collector",
+                "negative_reasons": negative_reasons
             }
         
         return {"found": False}
