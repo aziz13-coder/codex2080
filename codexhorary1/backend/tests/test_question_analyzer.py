@@ -18,3 +18,13 @@ def test_loan_application_question():
     houses, _ = analyzer._determine_houses(question_lower, q_type, None)
     assert houses in ([1, 8], [1, 2])
 
+
+def test_masters_program_admission_question():
+    analyzer = TraditionalHoraryQuestionAnalyzer()
+    question = "Will I be admitted to the master's program this cycle?"
+    question_lower = question.lower()
+    q_type, _ = analyzer._determine_question_type(question_lower)
+    assert q_type is Category.EDUCATION
+    houses, _ = analyzer._determine_houses(question_lower, q_type, None)
+    assert houses == [1, 10, 9]
+
