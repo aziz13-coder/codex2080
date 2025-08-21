@@ -1879,12 +1879,8 @@ class EnhancedTraditionalHoraryJudgmentEngine:
         # 7. FALLBACK: Build transparent math-based denial reasoning 
         config = cfg()
         
-        # Core issue: No perfection between significators
-        primary_issue = "no perfection between significators"
-        
         # Collect positive supporting signals with their values
         supportive_signals = []
-        total_support_score = 0
         
         # Reception support
         reception_info = self.reception_calculator.calculate_comprehensive_reception(
@@ -1897,13 +1893,11 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                 config.confidence.reception, f"{mutual}_bonus", 5
             )
             supportive_signals.append(f"{mutual} (+{reception_bonus})")
-            total_support_score += reception_bonus
         elif one_way:
             reception_bonus = getattr(
                 config.confidence.reception, "one_way_bonus", 3
             )
             supportive_signals.append(f"one-way reception (+{reception_bonus})")
-            total_support_score += reception_bonus
         
         # Moon testimony support (check for Moon aspects to significators or benefics)
         moon_next_aspect = chart.moon_next_aspect
@@ -1915,7 +1909,6 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                     moon_bonus = 8  # Standard Moon aspect bonus
                     moon_display = f"Moon {moon_next_aspect.aspect.display_name} {target.value} (applying)"
                     supportive_signals.append(f"{moon_display} (+{moon_bonus})")
-                    total_support_score += moon_bonus
         
         # Benefic aspect support (only positive scores are truly supportive)
         benefic_score = benefic_support.get("total_score", 0)
@@ -1931,21 +1924,13 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                 else:
                     benefic_display = strongest.get("description", f"benefic aspect (score: {benefic_score})")
                     supportive_signals.append(f"{benefic_display} (+{benefic_score})")
-                    total_support_score += benefic_score
             else:
-                total_support_score += benefic_score
-        
-        # Check if support meets overturn threshold
-        overturn_threshold = getattr(config.confidence.benefic, "min_support_for_overturn", 20)
-        
-        if supportive_signals:
-            signals_text = " and ".join(supportive_signals)
-            if total_support_score >= overturn_threshold:
-                reasoning.append(f"Denial: {primary_issue}. Supportive signals found — {signals_text} — total support ({total_support_score}) meets threshold ({overturn_threshold})")
-            else:
-                reasoning.append(f"Denial: {primary_issue}. Supportive signals found — {signals_text} — but total support ({total_support_score}) below overturn threshold ({overturn_threshold})")
-        else:
-            reasoning.append(f"Denial: {primary_issue}. No supportive signals found")
+                supportive_signals.append(f"benefic aspect (+{benefic_score})")
+
+        signals_text = " and ".join(supportive_signals) if supportive_signals else "none"
+        reasoning.append(
+            f"Denial: no perfection. Supportive signals noted — {signals_text}"
+        )
 
         final_confidence = min(confidence, 75)
         if moon_next_aspect_result.get("result") == "YES" or (
