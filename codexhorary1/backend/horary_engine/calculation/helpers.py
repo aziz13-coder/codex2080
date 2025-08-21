@@ -289,51 +289,59 @@ def calculate_moon_variable_speed(jd_ut: float) -> float:
         return 13.0  # Classical average fallback
 
 
-def check_aspect_separation_order(planet_a_lon: float, planet_a_speed: float,
-                                planet_c_lon: float, planet_c_speed: float,
-                                aspect_degrees: float, jd_current: float) -> Dict[str, Any]:
-    """
-    Check if planet C is separating from aspect with A (required for translation).
-    
-    Args:
-        planet_a_lon: Planet A longitude
-        planet_a_speed: Planet A speed  
-        planet_c_lon: Planet C longitude
-        planet_c_speed: Planet C speed
-        aspect_degrees: Aspect angle (0, 60, 90, 120, 180)
-        jd_current: Current Julian Day
-    
-    Returns:
-        Dict with separation analysis
-    
+def check_aspect_separation_order(
+    planet_a_lon: float,
+    planet_a_speed: float,
+    planet_c_lon: float,
+    planet_c_speed: float,
+    aspect_degrees: float,
+    jd_current: float,
+) -> Dict[str, Any]:
+    """Check if planet C is separating from an aspect with planet A.
+
+    The previous implementation estimated the separation trend by looking one
+    hour ahead. This fails for very slow or very fast planets. Instead we use
+    the relative speed between the planets to analytically compute whether the
+    orb is widening or narrowing, similar to :func:`_moon_orb_motion`.
+
+    Parameters
+    ----------
+    planet_a_lon : float
+        Planet A longitude.
+    planet_a_speed : float
+        Planet A speed in degrees per day.
+    planet_c_lon : float
+        Planet C longitude.
+    planet_c_speed : float
+        Planet C speed in degrees per day.
+    aspect_degrees : float
+        Aspect angle (0, 60, 90, 120, 180).
+    jd_current : float
+        Current Julian Day (kept for API compatibility).
+
+    Returns
+    -------
+    Dict[str, Any]
+        Separation analysis containing the current orb and its rate of change.
+
     Classical source: Lilly III Chap. XXVI - Translation of Light
     """
-    # Calculate current aspect angle
-    current_angle = abs(planet_a_lon - planet_c_lon)
-    if current_angle > 180:
-        current_angle = 360 - current_angle
-    
-    # Calculate future angle (1 hour ahead)
-    future_jd = jd_current + (1.0 / 24.0)  # 1 hour
-    future_a_lon = (planet_a_lon + planet_a_speed * (1.0 / 24.0)) % 360
-    future_c_lon = (planet_c_lon + planet_c_speed * (1.0 / 24.0)) % 360
-    
-    future_angle = abs(future_a_lon - future_c_lon)
-    if future_angle > 180:
-        future_angle = 360 - future_angle
-    
+
+    # Signed difference from exact aspect in range [-180, 180)
+    diff = (planet_c_lon - planet_a_lon - aspect_degrees + 180) % 360 - 180
+
     # Current orb from exact aspect
-    current_orb = abs(current_angle - aspect_degrees)
-    future_orb = abs(future_angle - aspect_degrees)
-    
-    # Separating if orb is increasing
-    is_separating = future_orb > current_orb
-    
+    current_orb = abs(diff)
+
+    # Relative speed determines whether the orb is widening or narrowing
+    relative_speed = planet_c_speed - planet_a_speed
+    orb_rate = diff * relative_speed
+    is_separating = orb_rate > 0
+
     return {
         "is_separating": is_separating,
         "current_orb": current_orb,
-        "future_orb": future_orb,
-        "orb_change": future_orb - current_orb
+        "orb_rate": orb_rate,
     }
 
 
