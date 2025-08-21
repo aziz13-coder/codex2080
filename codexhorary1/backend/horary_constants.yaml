@@ -128,10 +128,6 @@ confidence:
     to_house_10_bonus: 8         # Bonus when Moon aspects L10 ruler favorably
     to_house_10_cap_lift: 5      # Raise favorable cap from 80 → 85 when Moon → L10 harmoniously
 
-  # Benefic support thresholds
-  benefic:
-    min_support_for_overturn: 20 # Minimum benefic score needed to overturn denial
-  
   # Solar condition modifiers
   solar:
     cazimi_bonus: 15
