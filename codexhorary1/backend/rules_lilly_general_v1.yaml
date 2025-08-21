@@ -47,6 +47,10 @@ rules:
     tier: modifiers
     description: Debility penalty
     weight: -1.5
+  - id: MOD3
+    tier: modifiers
+    description: Retrograde penalty
+    weight: -1.5
   - id: T1
     tier: thresholds
     description: Dignity threshold

@@ -142,25 +142,36 @@ def reception(receiver: Actor, received: Actor, dignity: str) -> Reception:
 
 @dataclass
 class EssentialDignity:
-    """Essential dignity score for an actor."""
+    """Essential dignity indicator for an actor.
+
+    The ``score`` field traditionally stores a numeric value but in some
+    contexts we want to surface qualitative tokens (e.g. ``"detriment"``).
+    To keep the primitive flexible we allow either a ``float`` or a string
+    descriptor which higher level components may interpret as a discrete
+    debility marker.
+    """
 
     actor: Actor
-    score: float
+    score: Union[float, str]
 
 
-def essential(actor: Actor, score: float) -> EssentialDignity:
+def essential(actor: Actor, score: Union[float, str]) -> EssentialDignity:
     return EssentialDignity(actor, score)
 
 
 @dataclass
 class AccidentalDignity:
-    """Accidental dignity score for an actor."""
+    """Accidental dignity indicator for an actor.
+
+    Similar to :class:`EssentialDignity`, the ``score`` may be a number or a
+    qualitative token such as ``"retro"`` to denote retrogradation.
+    """
 
     actor: Actor
-    score: float
+    score: Union[float, str]
 
 
-def accidental(actor: Actor, score: float) -> AccidentalDignity:
+def accidental(actor: Actor, score: Union[float, str]) -> AccidentalDignity:
     return AccidentalDignity(actor, score)
 
 
