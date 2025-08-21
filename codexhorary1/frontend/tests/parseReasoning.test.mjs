@@ -13,25 +13,25 @@ function test(name, fn) {
 }
 
 test('parses negative percentages', () => {
-  const { rule, weight } = parseReasoningEntry('Loss of power -5%');
-  assert.strictEqual(weight, -5);
+  const { rule, weight } = parseReasoningEntry('Loss of power -5.5%');
+  assert.strictEqual(weight, -5.5);
   assert.strictEqual(rule, 'Loss of power');
 });
 
 test('parses trailing unsigned parenthetical', () => {
-  const { rule, weight } = parseReasoningEntry('Good fortune (12)');
-  assert.strictEqual(weight, 12);
+  const { rule, weight } = parseReasoningEntry('Good fortune (12.75)');
+  assert.strictEqual(weight, 12.75);
   assert.strictEqual(rule, 'Good fortune');
 });
 
 test('uses last numeric token when multiple present', () => {
-  const { rule, weight } = parseReasoningEntry('Mixed signals (+3) (-4)');
-  assert.strictEqual(weight, -4);
-  assert.strictEqual(rule, 'Mixed signals (+3)');
+  const { rule, weight } = parseReasoningEntry('Mixed signals (+3.5) (-4.25)');
+  assert.strictEqual(weight, -4.25);
+  assert.strictEqual(rule, 'Mixed signals (+3.5)');
 });
 
 test('ignores numeric references embedded in text', () => {
-  const { rule, weight } = parseReasoningEntry('Ruler of 7');
+  const { rule, weight } = parseReasoningEntry('Ruler of 7 houses');
   assert.strictEqual(weight, 0);
-  assert.strictEqual(rule, 'Ruler of 7');
+  assert.strictEqual(rule, 'Ruler of 7 houses');
 });
