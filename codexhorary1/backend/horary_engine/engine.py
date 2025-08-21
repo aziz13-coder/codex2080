@@ -41,8 +41,19 @@ from .services.geolocation import (
     LocationError,
     safe_geocode,
 )
-from .polarity_weights import TestimonyKey
-from models import Planet
+from models import Planet, Aspect, PlanetPosition, HoraryChart
+from .dsl import (
+    aspect as dsl_aspect,
+    translation as dsl_translation,
+    collection as dsl_collection,
+    prohibition as dsl_prohibition,
+    reception as dsl_reception,
+    essential as dsl_essential,
+    L1,
+    LQ,
+    Moon as MoonRole,
+    Role as DslRole,
+)
 
 # Setup module logger
 logger = logging.getLogger(__name__)
@@ -104,65 +115,148 @@ def _structure_reasoning(reasoning: List[Any]) -> List[Dict[str, Any]]:
     return structured
 
 
-def extract_testimonies(
-    chart: Dict[str, Any], contract: Dict[str, Planet]
-) -> List[TestimonyKey]:
-    """Extract normalized testimonies from a chart using category contract.
+def extract_testimonies(chart: HoraryChart, contract: Dict[str, Planet]) -> List[Any]:
+    """Extract DSL primitives from a chart using significator contract.
+
+    This function converts raw chart calculations into the domain-specific
+    language primitives defined in ``dsl.py``. It detects basic aspects along
+    with higher order relationships such as translation or collection of light,
+    prohibitions, receptions and planetary dignity states.
 
     Parameters
     ----------
-    chart : Dict[str, Any]
-        Chart data containing an ``aspects`` list.
+    chart : HoraryChart
+        Fully calculated chart.
     contract : Dict[str, Planet]
-        Mapping of role names to planets. Only the ``examiner`` role is
-        currently supported.
+        Mapping of role names (``querent``, ``quesited``, etc.) to planets.
 
     Returns
     -------
-    List[TestimonyKey]
-        Unique testimony tokens such as ``TestimonyKey.MOON_APPLYING_TRINE_EXAMINER_SUN``.
+    List[Any]
+        DSL primitive objects describing chart conditions.
     """
 
-    testimonies: List[TestimonyKey] = []
-    seen_testimonies: set[TestimonyKey] = set()
-    aspects = chart.get("aspects", [])
-    examiner = (contract or {}).get("examiner")
+    primitives: List[Any] = []
 
-    for aspect in aspects:
-        if not aspect.get("applying"):
-            continue
-        p1 = aspect.get("planet1")
-        p2 = aspect.get("planet2")
-        aspect_name = aspect.get("aspect", "").lower()
-        if examiner and (
-            (p1 == "Moon" and p2 == examiner.value)
-            or (p2 == "Moon" and p1 == examiner.value)
-        ):
-            token_str = (
-                f"moon_applying_{aspect_name}_examiner_{examiner.value.lower()}"
+    def resolve_actor(planet: Planet):
+        """Map planets to DSL actors based on the provided contract."""
+
+        if contract.get("querent") == planet:
+            return L1
+        if contract.get("quesited") == planet:
+            return LQ
+        if planet == Planet.MOON:
+            return MoonRole
+        # Any additional role provided in contract
+        for role_name, role_planet in (contract or {}).items():
+            if role_planet == planet:
+                return DslRole(role_name)
+        return planet
+
+    # ------------------------------------------------------------------
+    # Aspects
+    # ------------------------------------------------------------------
+    for asp in getattr(chart, "aspects", []):
+        primitives.append(
+            dsl_aspect(
+                resolve_actor(asp.planet1),
+                resolve_actor(asp.planet2),
+                asp.aspect,
+                applying=asp.applying,
             )
-            try:
-                token = TestimonyKey(token_str)
-            except ValueError:
-                continue
-            if token not in seen_testimonies:
-                testimonies.append(token)
-                seen_testimonies.add(token)
+        )
 
-    return testimonies
+    # ------------------------------------------------------------------
+    # Dignity states (essential)
+    # ------------------------------------------------------------------
+    for planet, pos in getattr(chart, "planets", {}).items():
+        primitives.append(
+            dsl_essential(resolve_actor(planet), float(pos.dignity_score))
+        )
+
+    # ------------------------------------------------------------------
+    # Translation, collection & prohibition
+    # ------------------------------------------------------------------
+    sig1 = (contract or {}).get("querent")
+    sig2 = (contract or {}).get("quesited")
+    if sig1 and sig2 and sig1 in chart.planets and sig2 in chart.planets:
+        pos1 = chart.planets[sig1]
+        pos2 = chart.planets[sig2]
+
+        def _calc_future_aspect_time(
+            p1: PlanetPosition,
+            p2: PlanetPosition,
+            aspect: Aspect,
+            jd_start: float = 0.0,
+            max_days: float = 0.0,
+        ) -> float:
+            target_angles = {
+                Aspect.CONJUNCTION: 0,
+                Aspect.SEXTILE: 60,
+                Aspect.SQUARE: 90,
+                Aspect.TRINE: 120,
+                Aspect.OPPOSITION: 180,
+            }
+            rel_speed = p1.speed - p2.speed
+            if rel_speed == 0:
+                return float("inf")
+            delta = (p2.longitude + target_angles[aspect] - p1.longitude) % 360.0
+            return delta / rel_speed
+
+        aspect_types = [
+            Aspect.CONJUNCTION,
+            Aspect.SEXTILE,
+            Aspect.SQUARE,
+            Aspect.TRINE,
+            Aspect.OPPOSITION,
+        ]
+        times: List[float] = []
+        for a in aspect_types:
+            t = _calc_future_aspect_time(pos1, pos2, a)
+            if t and t > 0:
+                times.append(t)
+        if times:
+            days_ahead = min(times)
+            result = check_future_prohibitions(
+                chart, sig1, sig2, days_ahead, _calc_future_aspect_time
+            )
+            if result.get("type") == "translation":
+                primitives.append(
+                    dsl_translation(result["translator"], sig1, sig2)
+                )
+            elif result.get("type") == "collection":
+                primitives.append(
+                    dsl_collection(result["collector"], sig1, sig2)
+                )
+            elif result.get("prohibited"):
+                primitives.append(
+                    dsl_prohibition(
+                        result.get("prohibitor"), result.get("significator")
+                    )
+                )
+
+        # --------------------------------------------------------------
+        # Receptions
+        # --------------------------------------------------------------
+        reception_calc = TraditionalReceptionCalculator()
+        reception_result = reception_calc.calculate_comprehensive_reception(
+            chart, sig1, sig2
+        )
+        for dignity in reception_result.get("planet1_receives_planet2", []):
+            primitives.append(dsl_reception(sig1, sig2, dignity))
+        for dignity in reception_result.get("planet2_receives_planet1", []):
+            primitives.append(dsl_reception(sig2, sig1, dignity))
+
+    return primitives
 
 
 from models import (
-    Planet,
-    Aspect,
     Sign,
     SolarCondition,
     SolarAnalysis,
-    PlanetPosition,
     AspectInfo,
     LunarAspect,
     Significator,
-    HoraryChart,
 )
 from question_analyzer import TraditionalHoraryQuestionAnalyzer
 try:
