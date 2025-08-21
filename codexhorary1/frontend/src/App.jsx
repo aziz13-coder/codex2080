@@ -314,9 +314,25 @@ const JudgmentBreakdown = ({ reasoning, darkMode }) => {
   // Transform reasoning if it's still in string format
   const structuredReasoning = useMemo(() => {
     if (!reasoning || reasoning.length === 0) return [];
-    
+
+    const first = reasoning[0];
+
+    // Ledger entries from evaluate_chart
+    if (first && typeof first === 'object' && 'key' in first) {
+      return reasoning.map(item => {
+        const signedWeight = item.polarity === 'NEGATIVE'
+          ? -(item.weight || item.delta_no || 0)
+          : (item.weight || item.delta_yes || 0);
+        return {
+          stage: item.stage || item.kind || 'General',
+          rule: item.rule || item.key,
+          weight: typeof signedWeight === 'number' ? signedWeight : Number(signedWeight) || 0,
+        };
+      });
+    }
+
     // Already structured: ensure numeric weights
-    if (reasoning[0] && typeof reasoning[0] === 'object' && 'stage' in reasoning[0]) {
+    if (first && typeof first === 'object' && 'stage' in first) {
       return reasoning.map(item => ({
         ...item,
         weight: typeof item.weight === 'number' ? item.weight : Number(item.weight) || 0,
