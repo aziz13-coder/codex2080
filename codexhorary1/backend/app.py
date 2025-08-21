@@ -48,6 +48,8 @@ from collections import defaultdict
 
 from horary_engine.engine import HoraryEngine, serialize_planet_with_solar
 from horary_engine.services.geolocation import LocationError
+from evaluate_chart import evaluate_chart
+from horary_engine.utils import token_to_string
 
 
 
@@ -1040,7 +1042,19 @@ def calculate_chart():
 
             logger.info(f"Perfection type: {traditional_factors['perfection_type']}")
 
-        
+        # Attach structured evaluation results
+        try:
+            evaluation = evaluate_chart(result.get('chart_data', {}), use_dsl=False)
+            ledger = evaluation.get('ledger', [])
+            for entry in ledger:
+                entry['key'] = token_to_string(entry.get('key'))
+                if 'polarity' in entry and hasattr(entry['polarity'], 'name'):
+                    entry['polarity'] = entry['polarity'].name
+            result['ledger'] = ledger
+            result['rationale'] = evaluation.get('rationale', [])
+        except Exception as eval_error:
+            logger.warning(f"evaluate_chart failed: {eval_error}")
+            result['rationale'] = result.get('reasoning', [])
 
         return jsonify(result)
 

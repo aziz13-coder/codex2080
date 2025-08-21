@@ -90,6 +90,9 @@ export function buildChartPayload(chart, includeVerdict = true) {
     };
   };
 
+  const rationaleList = chart.rationale || chart.reasoning || [];
+  const ledgerEntries = chart.ledger || null;
+
   const payload = {
     id: chart.id,
     question: chart.question,
@@ -104,11 +107,16 @@ export function buildChartPayload(chart, includeVerdict = true) {
     aspects: chart.chart_data?.aspects || [],
     planets: chart.chart_data?.planets || {},
     traditional_factors: chart.traditional_factors || {},
-    solar_factors: chart.solar_factors || {}
+    solar_factors: chart.solar_factors || {},
+    reasoning: ledgerEntries || rationaleList,
   };
 
+  if (ledgerEntries) {
+    payload.ledger = ledgerEntries;
+  }
+
   if (includeVerdict) {
-    const keyTestimonies = chart.reasoning
+    const keyTestimonies = (chart.rationale || chart.reasoning || [])
       ?.filter(r => r.includes('perfection') || r.includes('reception') || r.includes('Moon') || r.includes('dignity') || r.includes('applying'))
       ?.slice(0, 5)
       ?.map(r => `• ${cleanMoonText(r)}`) || [];
@@ -116,7 +124,7 @@ export function buildChartPayload(chart, includeVerdict = true) {
     payload.verdict = {
       label: chart.judgment,
       confidence: chart.confidence,
-      rationale: chart.reasoning?.map(r => cleanMoonText(r)) || []
+      rationale: rationaleList.map(r => cleanMoonText(r))
     };
     payload.key_testimonies = keyTestimonies;
     payload.keyTestimoniesText = keyTestimonies.join('\n');
