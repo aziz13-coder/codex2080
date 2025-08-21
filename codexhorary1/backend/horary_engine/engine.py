@@ -12,6 +12,7 @@ Refactored with comprehensive configuration system and enhanced lunar calculatio
 import os
 import datetime
 import logging
+import re
 from typing import Dict, List, Optional, Any, Tuple
 from types import SimpleNamespace
 
@@ -72,13 +73,34 @@ def _structure_reasoning(reasoning: List[Any]) -> List[Dict[str, Any]]:
         if isinstance(entry, dict):
             structured.append(
                 {
-                    "stage": entry.get("stage", "analysis"),
+                    "stage": entry.get("stage", "General"),
                     "rule": entry.get("rule", entry.get("reason", "")),
                     "weight": entry.get("weight", entry.get("delta", 0)),
                 }
             )
-        else:
-            structured.append({"stage": "analysis", "rule": str(entry), "weight": 0})
+            continue
+
+        text = str(entry).strip()
+        stage = "General"
+        rule = text
+        weight = 0
+
+        stage_match = re.match(r"\s*([^:]+):\s*(.*)", text)
+        if stage_match:
+            stage = stage_match.group(1).strip()
+            rule = stage_match.group(2).strip()
+
+        weight_match = re.search(r"\s*(?:\(([+-]?\d+)%?\)|([+-]?\d+)%)\s*$", rule)
+        if weight_match:
+            weight_str = weight_match.group(1) or weight_match.group(2)
+            try:
+                weight = int(weight_str)
+            except (TypeError, ValueError):
+                weight = 0
+            rule = rule[: weight_match.start()].rstrip()
+
+        structured.append({"stage": stage, "rule": rule, "weight": weight})
+
     return structured
 
 
