@@ -285,7 +285,31 @@ const JudgmentBreakdown = ({ reasoning, darkMode }) => {
         </a>
       );
     }
-    return renderTextWithPlanetSymbols(cleanMoonText(text));
+    const content = renderTextWithPlanetSymbols(cleanMoonText(text));
+    if (typeof text === 'string') {
+      const lower = text.toLowerCase();
+      let label = null;
+      let color = '';
+      if (lower.includes('translates light')) {
+        label = 'Translation of Light';
+        color = 'text-blue-600 dark:text-blue-400';
+      } else if (lower.includes('collects light')) {
+        label = 'Collection of Light';
+        color = 'text-green-600 dark:text-green-400';
+      } else if (lower.includes('before perfection')) {
+        label = 'Prohibition';
+        color = 'text-red-600 dark:text-red-400';
+      }
+      if (label) {
+        return (
+          <span>
+            {content}{' '}
+            <span className={`ml-1 text-xs ${color}`}>({label})</span>
+          </span>
+        );
+      }
+    }
+    return content;
   };
   // Transform reasoning if it's still in string format
   const structuredReasoning = useMemo(() => {
