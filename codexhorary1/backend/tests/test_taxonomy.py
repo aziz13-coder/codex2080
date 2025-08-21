@@ -66,3 +66,10 @@ def test_manual_houses_override():
     assert result["querent_house"] == 1
     assert result["quesited_house"] == 5
     assert result["quesited"] == Planet.MARS
+
+
+def test_shared_ruler_description():
+    chart = DummyChart()
+    chart.house_rulers[7] = chart.house_rulers[1]
+    result = resolve(chart, Category.RELATIONSHIP, manual_houses=[1, 7])
+    assert result["description"] == "Shared Significator: Sun rules both houses 1 and 7"

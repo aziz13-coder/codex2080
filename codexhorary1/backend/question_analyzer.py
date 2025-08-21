@@ -484,7 +484,7 @@ class TraditionalHoraryQuestionAnalyzer:
 
         elif question_type == Category.RELATIONSHIP:
             # ENHANCED: Relationship questions use L1/L7 axis (self vs others)
-            houses.extend([1, 7])  # L1 = self, L7 = other person/partner
+            houses.append(7)  # L1 = self, L7 = other person/partner
 
         elif question_type == Category.PREGNANCY:
             if third_person_analysis and third_person_analysis.get("is_third_person"):

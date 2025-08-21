@@ -28,3 +28,13 @@ def test_masters_program_admission_question():
     houses, _ = analyzer._determine_houses(question_lower, q_type, None)
     assert houses == [1, 10, 9]
 
+
+def test_relationship_houses():
+    analyzer = TraditionalHoraryQuestionAnalyzer()
+    question = "Does my partner love me?"
+    question_lower = question.lower()
+    q_type, _ = analyzer._determine_question_type(question_lower)
+    assert q_type is Category.RELATIONSHIP
+    houses, _ = analyzer._determine_houses(question_lower, q_type, None)
+    assert houses == [1, 7]
+
