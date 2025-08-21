@@ -50,6 +50,7 @@ from .dsl import (
     prohibition as dsl_prohibition,
     reception as dsl_reception,
     essential as dsl_essential,
+    accidental as dsl_accidental,
     L1,
     LQ,
     Moon as MoonRole,
@@ -171,9 +172,13 @@ def extract_testimonies(chart: HoraryChart, contract: Dict[str, Planet]) -> List
     # Dignity states (essential)
     # ------------------------------------------------------------------
     for planet, pos in getattr(chart, "planets", {}).items():
-        primitives.append(
-            dsl_essential(resolve_actor(planet), float(pos.dignity_score))
-        )
+        actor = resolve_actor(planet)
+        primitives.append(dsl_essential(actor, float(pos.dignity_score)))
+        # Emit qualitative debility tokens for downstream rule weighting
+        if pos.dignity_score <= -5:
+            primitives.append(dsl_essential(actor, "detriment"))
+        if pos.retrograde:
+            primitives.append(dsl_accidental(actor, "retro"))
 
     # ------------------------------------------------------------------
     # Translation, collection & prohibition

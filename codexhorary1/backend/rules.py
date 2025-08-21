@@ -34,6 +34,7 @@ RULES: List[RuleDict] = [
     {"id": "M2", "tier": "moon", "description": "Moon square Saturn", "weight": 1.0},
     {"id": "MOD1", "tier": "modifiers", "description": "Reception boost", "weight": 1.0},
     {"id": "MOD2", "tier": "modifiers", "description": "Debility penalty", "weight": 1.0},
+    {"id": "MOD3", "tier": "modifiers", "description": "Retrograde penalty", "weight": 1.0},
     {"id": "T1", "tier": "thresholds", "description": "Dignity threshold", "weight": 1.0},
     {"id": "T2", "tier": "thresholds", "description": "Speed threshold", "weight": 1.0},
 ]

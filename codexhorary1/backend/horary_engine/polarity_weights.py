@@ -5,6 +5,7 @@ from __future__ import annotations
 from enum import Enum
 
 from .polarity import Polarity
+from rule_engine import get_rule_weight
 
 
 class TestimonyKey(Enum):
@@ -16,6 +17,8 @@ class TestimonyKey(Enum):
     PERFECTION_DIRECT = "perfection_direct"
     PERFECTION_TRANSLATION_OF_LIGHT = "perfection_translation_of_light"
     PERFECTION_COLLECTION_OF_LIGHT = "perfection_collection_of_light"
+    ESSENTIAL_DETRIMENT = "essential_detriment"
+    ACCIDENTAL_RETROGRADE = "accidental_retrograde"
 
 
 # Prevent pytest from collecting the enum as a test class
@@ -33,6 +36,9 @@ POLARITY_TABLE: dict[TestimonyKey, Polarity] = {
     TestimonyKey.PERFECTION_DIRECT: Polarity.POSITIVE,
     TestimonyKey.PERFECTION_TRANSLATION_OF_LIGHT: Polarity.POSITIVE,
     TestimonyKey.PERFECTION_COLLECTION_OF_LIGHT: Polarity.POSITIVE,
+    # Debility indicators
+    TestimonyKey.ESSENTIAL_DETRIMENT: Polarity.NEGATIVE,
+    TestimonyKey.ACCIDENTAL_RETROGRADE: Polarity.NEGATIVE,
 }
 
 WEIGHT_TABLE: dict[TestimonyKey, float] = {
@@ -42,6 +48,9 @@ WEIGHT_TABLE: dict[TestimonyKey, float] = {
     TestimonyKey.PERFECTION_DIRECT: 1.0,
     TestimonyKey.PERFECTION_TRANSLATION_OF_LIGHT: 1.0,
     TestimonyKey.PERFECTION_COLLECTION_OF_LIGHT: 1.0,
+    # Debility weights sourced from rule pack
+    TestimonyKey.ESSENTIAL_DETRIMENT: abs(get_rule_weight("MOD2")),
+    TestimonyKey.ACCIDENTAL_RETROGRADE: abs(get_rule_weight("MOD3")),
 }
 
 
