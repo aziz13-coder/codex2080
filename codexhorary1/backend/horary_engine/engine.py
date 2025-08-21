@@ -3610,16 +3610,24 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                     chart, querent, quesited, days_to_perfection
                 )
                 if prohibition_check.get("prohibited"):
+                    # Pass through prohibitor details so callers know what blocked perfection
                     return {
                         "perfects": False,
                         "type": prohibition_check.get("type", "prohibition"),
                         "reason": prohibition_check["reason"],
+                        "prohibitor": prohibition_check.get("prohibitor"),
+                        "significator": prohibition_check.get("significator"),
                     }
 
                 if prohibition_check.get("type") in ("translation", "collection"):
                     kind = prohibition_check["type"]
                     conf_key = (
                         "translation_of_light" if kind == "translation" else "collection_of_light"
+                    )
+                    extra = (
+                        {"translator": prohibition_check.get("translator")}
+                        if kind == "translation"
+                        else {"collector": prohibition_check.get("collector")}
                     )
                     return {
                         "perfects": True,
@@ -3629,6 +3637,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                         "reason": prohibition_check["reason"],
                         "t_perfect_days": prohibition_check.get("t_event"),
                         "aspect": aspect_type,
+                        **extra,
                         "tags": [{"family": "perfection", "kind": kind}],
                     }
 
